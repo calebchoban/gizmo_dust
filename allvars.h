@@ -110,6 +110,11 @@
 
 #define REDUC_FAC      0.98 /* used to pad memory in domain decomposition structures, should be slightly less than unity */
 
+#ifdef CHEMCOOL
+#include "sg_chemistry/chemcool_consts.h"
+#include "sg_chemistry/f2c.h"
+#endif
+
 #ifdef PMGRID
 #define PM_ENLARGEREGION 1.1    /* enlarges PMGRID region as the simulation evolves */
 /*
@@ -1407,11 +1412,17 @@ typedef unsigned long long peano1D;
 #endif
 
 
-#if !defined(RT_HYDROGEN_GAS_ONLY) || defined(RT_CHEM_PHOTOION_HE)
+#if !defined(RT_HYDROGEN_GAS_ONLY) || defined(RT_CHEM_PHOTOION_HE) || !defined(CHEMCOOL)
 #define  HYDROGEN_MASSFRAC 0.76 /*!< mass fraction of hydrogen, relevant only for radiative cooling */
+#elif CHEMCOOL
+#define HYDROGEN_MASSFRAC 0.7065
 #else
 #define  HYDROGEN_MASSFRAC 1.0  /*!< mass fraction of hydrogen, relevant only for radiative cooling */
 #endif
+
+//#ifdef CHEMCOOL
+//#define  HYDROGEN_MASSFRAC 0.7065 //also used in chemistry
+//#endif
 
 #define  MAX_REAL_NUMBER  1e56
 #define  MIN_REAL_NUMBER  1e-56
@@ -1739,8 +1750,9 @@ typedef MyDouble MyBigFloat;
 #define CPU_DUMMY08       55
 #define CPU_DUMMY09       56
 #define CPU_DUMMY10       57
+#define CPU_HYDNETWORK     58
 
-#define CPU_PARTS          58  /* this gives the number of parts above (must be last) */
+#define CPU_PARTS          59  /* this gives the number of parts above (must be last) */
 
 #define CPU_STRING_LEN 120
 
@@ -2145,6 +2157,12 @@ extern FILE
 #endif
 #endif
  *FdCPU;        /*!< file handle for cpu.txt log-file. */
+#if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK
+extern FILE *FdSNinfo;          /*!< file handle for SNinfo.txt log-file. */
+#endif
+#ifdef OUTPUT_STARFORMATION_INFO
+extern FILE *FdSFinfo;          /*!< file handle for SFinfo.txt log-file. */
+#endif
 #ifdef GALSF
 extern FILE *FdSfr;		/*!< file handle for sfr.txt log-file. */
 #endif
@@ -2370,6 +2388,61 @@ extern struct global_data_all_processes
   /* frequency of tree reconstruction/domain decomposition */
   double TreeDomainUpdateFrequency;	/*!< controls frequency of domain decompositions  */
 
+#ifdef CHEMCOOL
+  double InitMolHydroAbund;
+  double InitHPlusAbund;
+  double InitCOAbund;
+
+  double InitialMetallicity;
+  double G0;
+  double DGRnormalized;
+  double CosmicRayIonRate;
+  int PhotochemApprox;
+#ifdef G0_SCALE_WITH_TOTAL_SFR
+  double Mgas0;
+  double FactorG0;
+#endif
+#endif
+
+#ifdef RANDOM_SN_INJECT
+  double RateSN;
+  double InitDensity;
+  double DensScaleIndex;   //random=0, linear=1, Schmidt=1.5
+  double FacNumNgbSN;
+#ifdef MULTI_SN_INJECT
+  double TimeIntervalSN;
+  double TimeToExplode;
+  int NumOfSN;
+#endif
+#endif
+
+#ifdef STELLAR_FEEDBACK
+  double FacNumNgbSN;
+  double LifeTimeSNII;
+  double MassPerStarIMF;
+#endif
+#ifdef STOCHASTIC_IMF
+  double MinMassIMF;
+  double MaxMassIMF;
+#endif
+
+#ifdef PHOTO_IONIZATION
+  double InitialGasMass;
+#endif
+#ifdef INSTANT_SN_FEEDBACK_FOR_SOME_TIME
+  double TimeInstantSN;
+#endif
+#ifdef JEANS_LENGTH_THRESHOLD
+  double SfThreshJeansLength;
+#endif
+#ifdef JEANS_MASS_THRESHOLD
+  double FacSfThreshMJ;
+#endif
+#ifdef SF_INSTANT_CUTOFF
+  double nHcutoffSF;
+#endif
+
+
   /* gravitational and hydrodynamical softening lengths (given in terms of an `equivalent' Plummer softening length)
    * five groups of particles are supported 0=gas,1=halo,2=disk,3=bulge,4=stars */
     double MinGasHsmlFractional; /*!< minimim allowed gas kernel length relative to force softening (what you actually set) */
@@ -2502,7 +2575,9 @@ extern struct global_data_all_processes
   double OverDensThresh;
   double PhysDensThresh;
   double MaxSfrTimescale;
-
+#ifdef STOCHASTIC_IMF 
+  double SfEffPerFreeFall;
+#endif
 #ifdef GALSF_EFFECTIVE_EQS
   double EgySpecSN;
   double FactorSN;
@@ -2764,7 +2839,9 @@ extern struct global_data_all_processes
   double BH_fb_duty_cycle;
   double BH_fb_period;
 #endif
-
+#ifdef TREE_RAD
+  double ShieldingLength;
+#endif
 }
 All;
 
@@ -2924,6 +3001,40 @@ extern ALIGN(32) struct particle_data
 #endif
 #ifdef GALSF_FB_FIRE_PROTOSTELLARJETS
     MyFloat NewStar_Momentum_For_JetFeedback; /* amount of momentum to return from protostellar jet sub-grid model */
+#endif
+
+#if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK
+  int flag_SNII;
+#endif
+
+#if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK
+  double NumNgbSN;
+  double HsmlSN;
+#endif
+
+#if defined STELLAR_FEEDBACK
+double DensAroundStar_new;
+double InternalEnergyAroundStar;
+#endif
+
+#ifdef STOCHASTIC_IMF
+  double MassMassiveStar;
+#endif
+
+#ifdef G0_VARIABLE
+  MyFloat UV_luminosity;
+#endif
+
+#ifdef PHOTO_IONIZATION
+  MyFloat StroemgrenRadius;
+  MyFloat N_tbi;
+  MyFloat N_ionized;
+  MyFloat Rs_old;
+  MyFloat N_unmark;
+  int OverIonized;
+  int NumNgbAll;
+  int oldNumNgbAll;
+  int flag_PI;
 #endif
 
 #if defined(GRAIN_FLUID)
@@ -3316,7 +3427,30 @@ extern struct gas_cell_data
 
     MyFloat MaxSignalVel;           /*!< maximum signal velocity (needed for time-stepping) */
     int recent_refinement_flag;     /*!< key that tells the code this cell was just refined or de-refined, to know to treat some other operations with care */
-    
+
+#ifdef CHEMCOOL
+    MyFloat Temp;                /*!< gas temperature */
+    MyFloat TracAbund[TRAC_NUM];    /*!< current abundances of tracer variables */
+    MyFloat DustTemp;               /*!< Temperature of dust, in K */
+#ifdef OUTPUT_INDIVIDUAL_COOLRATES
+    MyFloat Lambda[28];
+    MyFloat LambdaChem[6];
+#endif
+#ifdef OUTPUT_SHIELD_FAC
+    MyFloat Fac_shield_h2;
+    MyFloat Fac_shield_dust;
+#endif
+#endif /* CHEMCOOL */
+
+#if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK
+  int flagFBinj;
+#endif
+
+#ifdef PHOTO_IONIZATION
+  int Ionized;
+  MyIDType IonizedBy;
+#endif
+
 #ifdef GALSF_FB_FIRE_RT_UVHEATING
     MyFloat Rad_Flux_UV;              /*!< local UV field strength */
     MyFloat Rad_Flux_EUV;             /*!< local (ionizing/hard) UV field strength */
@@ -3583,6 +3717,21 @@ extern struct gas_cell_data
   MyDouble TD_DynDiffCoeff_error_default;
 #endif
 #endif
+#ifdef TREE_RAD
+#define NPIX 12*NSIDE*NSIDE
+  double Projection[NPIX];
+#ifdef TREE_RAD_H2
+  double ProjectionH2[NPIX];
+#endif
+#ifdef TREE_RAD_CO
+  double ProjectionCO[NPIX];
+#endif
+#ifdef G0_VARIABLE
+  double UV_flux[NPIX];
+#endif
+#else /* TREE_RAD */
+#define NPIX 1
+#endif
 
 }
   *SphP,				/*!< holds gas cell data on local processor */
@@ -3744,6 +3893,19 @@ extern struct gravdata_out
 #endif    
 #endif
 #endif
+
+#ifdef TREE_RAD
+  MyFloat Projection[NPIX];
+#ifdef TREE_RAD_H2
+  MyFloat ProjectionH2[NPIX];
+#endif
+#ifdef TREE_RAD_CO
+  MyFloat ProjectionCO[NPIX];
+#endif
+#ifdef G0_VARIABLE
+  MyFloat UV_flux[NPIX];
+#endif
+#endif
 }
  *GravDataResult,		/*!< holds the partial results computed for imported particles. Note: We use GravDataResult = GravDataGet, such that the result replaces the imported data */
  *GravDataOut;			/*!< holds partial results received from other processors. This will overwrite the GravDataIn array */
@@ -3898,6 +4060,7 @@ enum iofields
   IO_ABVC,
   IO_AMDC,
   IO_PHI,
+  IO_MG_PHI,
   IO_GRADPHI,
   IO_GRADRHO,
   IO_GRADVEL,
@@ -3937,8 +4100,37 @@ enum iofields
   IO_AGS_PSI_RE,
   IO_AGS_PSI_IM,
   IO_AGS_ZETA,
+#ifdef CHEMCOOL
+  IO_SG_CHEM,
+  IO_SG_DUST_TEMP,
+  //IO_GAMMA,
+  //IO_CHEM_TEMP,
+#ifdef OUTPUT_SHIELD_FAC
+  IO_SHIELD_FAC_H2,
+  IO_SHIELD_FAC_DUST,
+#endif
+#ifdef OUTPUT_INDIVIDUAL_COOLRATES
+  IO_COOLRATES,
+  IO_CHEM_COOLRATES,
+#endif
+#endif
+#if defined (TREE_RAD) && defined (OUTPUTCOL)
+  IO_TREE_RAD,
+#ifdef TREE_RAD_H2
+  IO_TREE_RAD_H2,
+#endif
+#ifdef TREE_RAD_CO
+  IO_TREE_RAD_CO,
+#endif
+#endif //TREE_RAD
+#ifdef G0_VARIABLE
+  IO_FLUX,
+#endif
   IO_VSTURB_DISS,
   IO_VSTURB_DRIVE,
+#ifdef OUTPUT_VELGRAD
+  IO_VELGRAD,
+#endif
   IO_grHI,
   IO_grHII,
   IO_grHM,
@@ -4049,6 +4241,15 @@ extern ALIGN(32) struct NODE
       int sibling;		/*!< this gives the next node in the walk in case the current node can be used */
       int nextnode;		/*!< this gives the next node in case the current node needs to be opened */
       int father;		/*!< this gives the parent node of each node (or -1 if we have the root node) */
+#ifdef TREE_RAD_H2
+      MyFloat h2mass;             /*!< mass of h2 in node */
+#endif
+#ifdef TREE_RAD_CO
+      MyFloat comass;             /*!< mass of co in node */
+#endif
+#ifdef G0_VARIABLE
+      MyFloat uv_luminosity;             /*!< uv luminosity in node */
+#endif    
     }
     d;
   }
@@ -4158,5 +4359,88 @@ extern gsl_rng* StRng; // random number generator key
 #define GEOFACTOR_TABLE_LENGTH 1000    /*!< length of the table used for the geometric factor spline */
 extern MyDouble GeoFactorTable[GEOFACTOR_TABLE_LENGTH];
 #endif
+
+#ifdef CHEMCOOL
+extern struct{
+  double temptab[NMD];
+  double cltab[NMD][NCLTAB];
+  double chtab[NMD][NCHTAB];
+  double dtcltab[NMD][NCLTAB];
+  double dtchtab[NMD][NCHTAB];
+  double crtab[NCRTAB];
+  double crphot[NCRPHOT];
+  double phtab[NPHTAB];
+  double cst[NCONST];
+  double dtlog;
+  double tdust;
+  double tmax;
+  double tmin;
+  double deff;
+  double abundc;
+  double abundo;
+  double abundsi;
+  double abundD;
+  double abundM;
+  double abundN;
+  double G0;
+  double f_rsc;
+  double phi_pah;
+  double dust_to_gas_ratio;
+  double AV_conversion_factor;
+  double cosmic_ray_ion_rate;
+  double redshift;
+  double AV_ext;
+  double pdv_term;
+  double h2_form_ex;
+  double h2_form_kin;
+  //#ifdef OUTPUT_INDIVIDUAL_COOLRATES
+  double lambda[28];
+  double lambda_chem[6];
+  //#endif
+#ifdef OUTPUT_SHIELD_FAC
+  double fac_shield_h2;
+  double fac_shield_dust;
+#endif
+#ifdef WSS_CIE_COOL
+  double Zmass[12];
+  double C_tbl[352], N_tbl[352], O_tbl[352];
+  double Ne_tbl[352], Mg_tbl[352], Si_tbl[352];
+  double S_tbl[352], Ca_tbl[352], Fe_tbl[352];
+  double HeI_tbl[51], HeII_tbl[51];
+#endif
+  double dm_density;
+}COOLR;
+
+extern struct{
+  int iphoto;
+  int iflag_mn;
+  int iflag_ad;
+  int iflag_atom;
+  int iflag_3bh2a;
+  int iflag_3bh2b;
+  int iflag_h3pra;
+  int iflag_h2opc;
+  int id_current;
+  int index_current;
+  int idma_mass_option;
+  int no_chem;
+  int irad_heat;
+  int isrf_option;
+}COOLI;
+
+//#define MAX_NRAD 10000
+#if defined TREE_RAD
+extern struct {
+  double diffuse_dust_heat;
+#ifdef G0_VARIABLE
+  double fac_uv[NPIX];
+#endif
+  double column_density_projection[NPIX];
+  double column_density_projection_h2[NPIX];
+  double column_density_projection_co[NPIX];
+}PROJECT;
+#endif
+
+#endif /* CHEMCOOL */
 
 #endif  /* ALLVARS_H  - please do not put anything below this line */

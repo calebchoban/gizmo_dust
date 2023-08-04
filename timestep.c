@@ -261,6 +261,15 @@ integertime get_timestep(int p,		/*!< particle index */
     double ax, ay, az, ac, csnd = 0, dt = All.MaxSizeTimestep, dt_courant = 0, dt_divv = 0;
     integertime ti_step; int k; k=0;
 
+#ifdef CHEMCOOL
+    double hubble_param;
+
+    if(All.ComovingIntegrationOn)
+        hubble_param = All.HubbleParam;
+    else
+        hubble_param = 1.0;
+#endif
+
 #ifdef IO_GRADUAL_SNAPSHOT_RESTART // if on the first timestep of a snapshot restart, start at the lowest allowed timestep to minimize any transient effects
     if(RestartFlag == 2 && All.Ti_Current == 0) {return 2;}
 #endif
@@ -428,6 +437,25 @@ integertime get_timestep(int p,		/*!< particle index */
 #endif
         if(dt_cour < dt) {dt = dt_cour;}
     }
+#endif
+
+#ifdef MULTI_SN_INJECT
+    if(P[p].Type == 0 && P[p].ID == 1)
+      {
+        double dt_sn = 0.05 * All.TimeIntervalSN;
+        if(dt_sn < dt)
+          dt = dt_sn;
+      }
+#endif
+
+#ifdef STELLAR_FEEDBACK
+    if(P[p].Type == 4 && P[p].flag_SNII == 0)
+      {
+        double dt_snii = 1e4; //unit: years (resolve t_cool = 4.4e4 yr nH^-0.55)
+        dt_snii *= (SECONDS_PER_YEAR * All.HubbleParam / UNIT_TIME_IN_CGS); //code unit
+        if(dt_snii < dt)
+          dt = dt_snii;
+      }
 #endif
 
 

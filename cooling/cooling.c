@@ -25,7 +25,7 @@
 #define NCOOLTAB  2000 /* defines size of cooling table */
 
 #if !defined(CHIMES)
-static double Tmin = -1.0, Tmax = 9.0, deltaT; /* minimum/maximum temp, in log10(T/K) and temperature gridding: will be appropriately set in make_cooling_tables subroutine below */
+static double Tmin = 0.0, Tmax = 9.0, deltaT; /* minimum/maximum temp, in log10(T/K) and temperature gridding: will be appropriately set in make_cooling_tables subroutine below */
 static double *BetaH0, *BetaHep, *Betaff, *AlphaHp, *AlphaHep, *Alphad, *AlphaHepp, *GammaeH0, *GammaeHe0, *GammaeHep; // UV background parameters
 #ifdef COOL_METAL_LINES_BY_SPECIES
 /* if this is enabled, the cooling table files should be in a folder named 'spcool_tables' in the run directory.
@@ -264,6 +264,26 @@ void do_the_cooling_for_particle(int i)
 #endif
 #endif
 
+#ifndef CHEMCOOL        
+
+        /* InternalEnergy, InternalEnergyPred, Pressure, ne are now immediately updated; however, if COOLING_OPERATOR_SPLIT
+         is set, then DtInternalEnergy carries information from the hydro loop which is only half-stepped here, so is -not- updated. 
+         if the flag is not set (default), then the full hydro-heating is accounted for in the cooling loop, so it should be re-zeroed here */
+#ifdef PRESSURE_FLOOR
+        SphP[i].InternalEnergyTrue = unew;
+        double u_floor = (All.G * SphP[i].Density * All.cf_a3inv) / (GAMMA * GAMMA_MINUS1 * M_PI) * pow(All.SfThreshJeansLength, 2);
+        if( unew <= u_floor )
+          unew = u_floor;
+#endif
+        SphP[i].InternalEnergy = unew;
+        SphP[i].InternalEnergyPred = SphP[i].InternalEnergy;
+        SphP[i].Pressure = get_pressure(i);
+#ifndef COOLING_OPERATOR_SPLIT
+        SphP[i].DtInternalEnergy = 0;
+#endif
+
+#endif
+
     } // closes if((dt>0)&&(P[i].Mass>0)&&(P[i].Type==0)) check
 }
 
@@ -274,6 +294,15 @@ void do_the_cooling_for_particle(int i)
 double DoCooling(double u_old, double rho, double dt, double ne_guess, double *ne_eval, int target)
 {
     double u, du; u=0; du=0;
+
+#ifdef CHEMCOOL
+    //if(P[target].ID==1)
+    //printf("SG cooling begins...\n");
+    u = do_chemcool_step(target, dt, 0, 0);
+    //if(P[target].ID==1)
+    //printf("SG cooling done...\n");
+    return DMAX(u,All.MinEgySpec);
+#endif
 
 #ifdef COOL_GRACKLE
 #ifndef COOLING_OPERATOR_SPLIT
@@ -1623,9 +1652,13 @@ void InitCool(void)
 #endif
 
 #else // CHIMES
+if(ThisTask == 0) printf("Allcoate memory ...\n");
     InitCoolMemory();
+if(ThisTask == 0) printf("Building Tables ...\n");
     MakeCoolingTable();
+if(ThisTask == 0) printf("Read TREECOOL ...\n");
     ReadIonizeParams("TREECOOL");
+if(ThisTask == 0) printf("Ionize Params ...\n");
     IonizeParams();
 #ifdef COOL_METAL_LINES_BY_SPECIES
     LoadMultiSpeciesTables();

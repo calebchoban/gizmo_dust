@@ -136,6 +136,29 @@ void read_ic(char *fname)
     }
 #endif
 
+#ifdef PHOTO_IONIZATION
+    double min_mass = 1e20;
+    if ((RestartFlag == 0) || (RestartFlag == 2))
+      {
+        if (All.MassTable[0] > 0)
+          All.InitialGasMass = All.MassTable[0];
+        else
+          {
+            for(i = 0; i < NumPart; i++)
+              {
+                if(P[i].Type == 0)
+                  {
+                    if(P[i].Mass < min_mass)
+                      min_mass = P[i].Mass;
+                  }
+              }
+            All.InitialGasMass = min_mass;
+          }
+        if(ThisTask == 0)
+          printf("All.InitialGasMass = %g\n", All.InitialGasMass );
+      }
+#endif
+
     u_init = All.InitGasTemp / ((GAMMA_DEFAULT-1) * U_TO_TEMP_UNITS);
 
     molecular_weight = 4 / (8 - 5 * (1 - HYDROGEN_MASSFRAC)); /* assume full ionization */
@@ -625,6 +648,18 @@ void empty_read_buffer(enum iofields blocknr, int offset, int pc, int type)
         case IO_HSMS:
         case IO_ACRB:
         case IO_RAD_FLUX:
+#if defined (TREE_RAD) && defined (OUTPUTCOL)
+        case IO_TREE_RAD:
+#ifdef TREE_RAD_H2
+        case IO_TREE_RAD_H2:
+#endif
+#ifdef TREE_RAD_CO
+        case IO_TREE_RAD_CO:
+#endif
+#endif
+#ifdef OUTPUT_VELGRAD
+        case IO_VELGRAD:
+#endif
         case IO_VSTURB_DISS:
         case IO_VSTURB_DRIVE:
         case IO_grHI:

@@ -573,6 +573,7 @@ double evaluate_time_since_t_initial_in_Gyr(double t_initial);
 #ifdef GALSF
 int is_particle_single_star_eligible(long i);
 double evaluate_stellar_age_Gyr(long i);
+double evaluate_stellar_age_Gyr_simple(double stellar_tform);
 double evaluate_light_to_mass_ratio(double stellar_age_in_gyr, int i);
 double calculate_relative_light_to_mass_ratio_from_imf(double stellar_age_in_gyr, int i, int mode);
 double calculate_individual_stellar_luminosity(double mdot, double mass, long i);
@@ -795,6 +796,7 @@ double get_equilibrium_dust_temperature_estimate(int i, double shielding_factor_
 double return_electron_fraction_from_heavy_ions(int target, double temperature, double density_cgs, double n_elec_HHe);
 void apply_pm_hires_region_clipping_selection(int i);
 double get_starformation_rate(int i, int mode);
+double get_starformation_rate_simple(int i);
 void update_internalenergy_for_galsf_effective_eos(int i, double tcool, double tsfr, double cloudmass_fraction, double rateOfSF);
 void init_clouds(void);
 void integrate_sfr(void);
@@ -1039,6 +1041,48 @@ void do_postgravity_cbe_calcs(int i);
 double do_cbe_nvt_inversion_for_faces(int i);
 #endif
 
+#ifdef STELLAR_FEEDBACK
+void stellarfeedback(void);
+int stellarFB_evaluate(int target, int mode, int *exportflag, int *exportnodecount, int *exportindex, int *ngblist);
+void *stellarFB_evaluate_primary(void *p);
+void *stellarFB_evaluate_secondary(void *p);
+#endif
+#ifdef DUST_IN_AGB
+void agb_feedback(void);
+int agbFB_evaluate(int target, int mode, int *exportflag, int *exportnodecount, int *exportindex, int *ngblist);
+void *agbFB_evaluate_primary(void *p);
+void *agbFB_evaluate_secondary(void *p);
+#endif
+
+#ifdef PHOTO_IONIZATION
+void photoionize(void);
+int photoionize_evaluate(int target, int mode, int *exportflag, int *exportnodecount, int *exportindex, int *ngblist);
+void *photoionize_evaluate_primary(void *p);
+void *photoionize_evaluate_secondary(void *p);
+#endif
+
+#if defined SAMPLE_IMF || defined STOCHASTIC_IMF
+double get_lifetime(double mass);
+double get_logL_pe(double mass);
+double get_logL_pd(double mass);
+double get_logS_ly(double mass);
+int get_index(double search);
+#endif
+
+#ifdef RANDOM_SN_INJECT
+void random_SN_inject(void);
+int randomSN_evaluate(int target, int mode, int *exportflag, int *exportnodecount, int *exportindex, int *ngblist);
+void *randomSN_evaluate_primary(void *p);
+void *randomSN_evaluate_secondary(void *p);
+#endif
+
+#if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK
+void *update_weight_evaluate_primary(void *p);
+void *update_weight_evaluate_secondary(void *p);
+int update_weight_evaluate(int target, int mode, int *exportflag, int *exportnodecount, int *exportindex, int *ngblist);
+void update_weights(void);
+#endif
+
 #ifdef DM_FUZZY
 void do_dm_fuzzy_initialization(void);
 void do_dm_fuzzy_drift_kick(int pindex, double dt_entr, int mode);
@@ -1069,3 +1113,37 @@ double gravfac2(double r, double mass);
 void grav_accel_jerk(double mass, double dx[3], double dv[3], double accel[3], double jerk[3]);
 double eccentric_anomaly(double mean_anomaly, double ecc);
 #endif
+
+#ifdef CHEMCOOL
+double do_chemcool_step(int target, double dt, double dl, int mode);
+void chemcool_init(void);
+
+double calc_ekn(double energy, double density_cgs, double abh2);
+double calc_gamma_from_entropy(double entropy, double density, double abh2, double old_gamma);
+
+
+double compute_electron_fraction(MyFloat abundances[NSPEC]);
+double compute_initial_electron_fraction(void);
+double compute_initial_gamma(void);
+double compute_initial_molecular_weight(void);
+
+double evolve_abundances_(double* dt, double* dl, double* yn, double* divv,
+                          double* energy, double* abundances,
+                          double* column_est);
+
+void rate_eq_(int* nsp, double* t, double* y, double* ydot, double* rpar, int* ipar);
+void coolinmo_(void);
+void cheminmo_(void);
+
+void calc_gamma_(double* abh2, double* ekn, double* gamma);
+void calc_gamma_temp_(double* abh2, double* temp, double* gamma);
+void calc_spec_(double* temp, double* en);
+void calc_temp_(double* abh2, double* ekn, double* temp);
+double compute_gamma_(double* abh2, double* ekn, double* gamma);
+void init_temperature_lookup_(void);
+void init_tolerances_(void);
+void load_h2_table_(void);
+void calc_photo_wrapper_(double* temp, double rpar[NRPAR], double* abh2, double* abhd, double* abco);
+
+
+#endif /* CHEMCOOL */

@@ -225,6 +225,13 @@ FILE
 #endif
 *FdCPU;        /*!< file handle for cpu.txt log-file. */
 
+#if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK
+FILE *FdSNinfo;                 /*!< file handle for SNinfo.txt log-file. */
+#endif
+#if defined OUTPUT_STARFORMATION_INFO
+FILE *FdSFinfo;                 /*!< file handle for SFinfo.txt log-file. */
+#endif
+
 #ifdef GALSF
 FILE *FdSfr;			/*!< file handle for sfr.txt log-file. */
 #endif

@@ -14,6 +14,10 @@
 #include <pthread.h>
 #endif
 
+#ifdef TREE_RAD
+#include <chealpix.h>
+#endif
+
 /*! \file forcetree.c
  *  \brief gravitational tree and code for Ewald correction
  *
@@ -450,9 +454,20 @@ void force_update_node_recursive(int no, int sib, int father)
 #endif
     for(j=0;j<N_RT_FREQ_BINS;j++) {stellar_lum[j]=0;}
 #endif
+
 #ifdef RT_SEPARATELY_TRACK_LUMPOS
     MyFloat rt_source_lum_s[3];
     MyFloat rt_source_lum_vs[3];
+#endif
+
+#ifdef G0_VARIABLE
+    double uv_lum;
+#endif
+#ifdef TREE_RAD_H2
+    double h2mass, h2_mass_fraction;
+#endif
+#ifdef TREE_RAD_CO
+    double comass, co_mass_fraction;
 #endif
 
     MyFloat maxsoft;
@@ -482,6 +497,16 @@ void force_update_node_recursive(int no, int sib, int father)
 #ifdef COSMIC_RAY_SUBGRID_LEBRON
         cr_injection = 0;
 #endif
+#ifdef G0_VARIABLE
+	uv_lum = 0;
+#endif
+#ifdef TREE_RAD_H2
+	h2mass = 0;
+#endif
+#ifdef TREE_RAD_CO
+	comass = 0;
+#endif
+
 #ifdef RT_USE_GRAVTREE
         for(j=0;j<N_RT_FREQ_BINS;j++) {stellar_lum[j]=0;}
 #endif
@@ -564,6 +589,16 @@ void force_update_node_recursive(int no, int sib, int father)
 #ifdef COSMIC_RAY_SUBGRID_LEBRON
                         cr_injection += Nodes[p].cr_injection;
 #endif
+#ifdef G0_VARIABLE
+			uv_lum += Nodes[p].u.d.uv_luminosity;
+#endif
+#ifdef TREE_RAD_H2
+			h2mass += Nodes[p].u.d.h2mass;
+#endif
+#ifdef TREE_RAD_CO
+			comass += Nodes[p].u.d.comass;
+#endif
+
 #ifdef RT_USE_GRAVTREE
                         for(k=0;k<N_RT_FREQ_BINS;k++) {stellar_lum[k] += (Nodes[p].stellar_lum[k]);}
 #ifdef CHIMES_STELLAR_FLUXES
@@ -656,6 +691,21 @@ void force_update_node_recursive(int no, int sib, int father)
 #ifdef COSMIC_RAY_SUBGRID_LEBRON
                     cr_injection += cr_get_source_injection_rate(p);
 #endif
+
+#if defined(TREE_RAD_H2) || defined(TREE_RAD_CO)
+		    if(P[p].Type == 0) /*Only do this for gas!*/
+		      {
+#ifdef TREE_RAD_H2
+			h2_mass_fraction = 2.0 * SphP[p].TracAbund[IH2] * HYDROGEN_MASSFRAC;
+			h2mass += P[p].Mass*h2_mass_fraction;
+#endif
+#ifdef TREE_RAD_CO
+			co_mass_fraction = 28.0 * SphP[p].TracAbund[ICO] * HYDROGEN_MASSFRAC;
+			comass += P[p].Mass*co_mass_fraction;
+#endif
+		      }
+#endif /*for TREE_RAD_H2 or TREE_RAD_CO */
+
 #ifdef RT_USE_GRAVTREE
                     double lum[N_RT_FREQ_BINS];
 #ifdef CHIMES_STELLAR_FLUXES
@@ -843,6 +893,17 @@ void force_update_node_recursive(int no, int sib, int father)
 #ifdef COSMIC_RAY_SUBGRID_LEBRON
         Nodes[no].cr_injection = cr_injection;
 #endif
+#ifdef G0_VARIABLE
+	Nodes[no].u.d.uv_luminosity = uv_lum;
+#endif
+#ifdef TREE_RAD_H2
+	Nodes[no].u.d.h2mass = h2mass;
+#endif
+#ifdef TREE_RAD_CO
+	Nodes[no].u.d.comass = comass;
+#endif
+
+
 #ifdef RT_USE_GRAVTREE
         for(k=0;k<N_RT_FREQ_BINS;k++) {Nodes[no].stellar_lum[k] = stellar_lum[k];}
 #ifdef CHIMES_STELLAR_FLUXES
@@ -969,6 +1030,16 @@ void force_exchange_pseudodata(void)
 #ifdef COSMIC_RAY_SUBGRID_LEBRON
         MyFloat cr_injection;
 #endif
+#ifdef G0_VARIABLE
+      double uv_lum;
+#endif
+#ifdef TREE_RAD_H2
+      double h2mass;
+#endif
+#ifdef TREE_RAD_CO
+      double comass;
+#endif
+
 #ifdef RT_USE_GRAVTREE
         MyFloat stellar_lum[N_RT_FREQ_BINS];
 #ifdef CHIMES_STELLAR_FLUXES
@@ -1048,6 +1119,17 @@ void force_exchange_pseudodata(void)
 #ifdef COSMIC_RAY_SUBGRID_LEBRON
             DomainMoment[i].cr_injection = Nodes[no].cr_injection;
 #endif
+#ifdef G0_VARIABLE
+	    DomainMoment[i].uv_lum = Nodes[no].u.d.uv_luminosity;
+#endif
+#ifdef TREE_RAD_H2
+	    DomainMoment[i].h2mass = Nodes[no].u.d.h2mass;
+#endif
+#ifdef TREE_RAD_CO
+	    DomainMoment[i].comass = Nodes[no].u.d.comass;
+#endif
+
+
 #ifdef RT_USE_GRAVTREE
             int k; for(k=0;k<N_RT_FREQ_BINS;k++) {DomainMoment[i].stellar_lum[k] = Nodes[no].stellar_lum[k];}
 #ifdef CHIMES_STELLAR_FLUXES
@@ -1154,6 +1236,15 @@ void force_exchange_pseudodata(void)
 #ifdef COSMIC_RAY_SUBGRID_LEBRON
                     Nodes[no].cr_injection = DomainMoment[i].cr_injection;
 #endif
+#ifdef G0_VARIABLE
+		    Nodes[no].u.d.uv_luminosity = DomainMoment[i].uv_lum;
+#endif
+#ifdef TREE_RAD_H2
+		    Nodes[no].u.d.h2mass = DomainMoment[i].h2mass;
+#endif
+#ifdef TREE_RAD_CO
+		    Nodes[no].u.d.comass = DomainMoment[i].comass;
+#endif
 #ifdef RT_USE_GRAVTREE
                     int k; for(k=0;k<N_RT_FREQ_BINS;k++) {Nodes[no].stellar_lum[k] = DomainMoment[i].stellar_lum[k];}
 #ifdef CHIMES_STELLAR_FLUXES
@@ -1240,6 +1331,15 @@ void force_treeupdate_pseudos(int no)
 #endif
 
     MyFloat maxsoft;
+#ifdef G0_VARIABLE
+    double uv_lum=0;
+#endif
+#ifdef TREE_RAD_H2
+    double h2mass=0;
+#endif
+#ifdef TREE_RAD_CO
+    double comass=0;
+#endif
 
 #ifdef RT_SEPARATELY_TRACK_LUMPOS
     rt_source_lum_s[0] = 0;
@@ -1300,6 +1400,16 @@ void force_treeupdate_pseudos(int no)
 #ifdef COSMIC_RAY_SUBGRID_LEBRON
             cr_injection += Nodes[p].cr_injection;
 #endif
+#ifdef G0_VARIABLE
+	    uv_lum += Nodes[p].u.d.uv_luminosity;
+#endif
+#ifdef TREE_RAD_H2
+	    h2mass += Nodes[p].u.d.h2mass;
+#endif
+#ifdef TREE_RAD_CO
+	    comass += Nodes[p].u.d.comass;
+#endif
+
 #ifdef RT_USE_GRAVTREE
             int k; for(k=0;k<N_RT_FREQ_BINS;k++) {stellar_lum[k] += (Nodes[p].stellar_lum[k]);}
 #ifdef CHIMES_STELLAR_FLUXES
@@ -1459,6 +1569,16 @@ void force_treeupdate_pseudos(int no)
 #ifdef COSMIC_RAY_SUBGRID_LEBRON
     Nodes[no].cr_injection = cr_injection;
 #endif
+#ifdef G0_VARIABLE
+    Nodes[no].u.d.uv_luminosity = uv_lum;
+#endif
+#ifdef TREE_RAD_H2
+    Nodes[no].u.d.h2mass = h2mass;
+#endif
+#ifdef TREE_RAD_CO
+    Nodes[no].u.d.comass = comass;
+#endif
+
 #ifdef RT_USE_GRAVTREE
     int k; for(k=0;k<N_RT_FREQ_BINS;k++) {Nodes[no].stellar_lum[k] = stellar_lum[k];}
 #ifdef CHIMES_STELLAR_FLUXES
@@ -1729,6 +1849,34 @@ int force_treeevaluate(int target, int mode, int *exportflag, int *exportnodecou
 #ifdef EVALPOTENTIAL
     double fac_pot; MyLongDouble pot; pot = 0;
 #endif
+#ifdef TREE_RAD
+    double Projection[NPIX];
+    double ProjectionH2[NPIX];
+    double ProjectionCO[NPIX];
+    double gas_mass, h2_mass, co_mass, area;
+    double pixel_solid_angle = 4.0*M_PI / NPIX;
+    int j;
+
+#ifdef G0_VARIABLE
+    double uv_lum=0;
+    double uv_flux[NPIX];
+    for(j=0; j<NPIX; j++)
+      uv_flux[j] = 0.0;
+#endif
+
+    gas_mass = h2_mass = co_mass = 0.;
+
+    for ( j = 0; j < NPIX; j++ ) {
+      Projection[j] = 0.0;
+#ifdef TREE_RAD_H2
+      ProjectionH2[j] = 0.0;
+#endif
+#ifdef TREE_RAD_CO
+      ProjectionCO[j] = 0.0;
+#endif
+    }
+#endif//TREE_RAD
+   
 #ifdef COMPUTE_TIDAL_TENSOR_IN_GRAVTREE
     for(i1 = 0; i1 < 3; i1++) {for(i2 = 0; i2 < 3; i2++) {tidal_tensorps[i1][i2] = 0.0;}}
 #ifdef ADAPTIVE_GRAVSOFT_FROM_TIDAL_CRITERION
@@ -1875,6 +2023,26 @@ int force_treeevaluate(int target, int mode, int *exportflag, int *exportnodecou
                 /* only proceed if the mass is positive and there is separation! */
                 if((r2 > 0) && (mass > 0))
                 {
+
+#ifdef TREE_RAD
+		if ( P[no].Type == 0 )
+		  {
+		    gas_mass = mass;
+#ifdef TREE_RAD_H2
+		    h2_mass = mass * (2.0 * SphP[no].TracAbund[IH2] * HYDROGEN_MASSFRAC);
+#endif
+#ifdef TREE_RAD_CO
+		    co_mass = mass * (28.0 * SphP[no].TracAbund[ICO] * HYDROGEN_MASSFRAC);
+#endif
+		  }
+
+#ifdef G0_VARIABLE
+		if ( P[no].Type == 4 )
+		  {
+		    uv_lum = P[no].UV_luminosity;
+		  }
+#endif
+#endif //TREE_RAD
 
 #ifdef BH_CALC_DISTANCES
                 if(P[no].Type == 5)             /* found a BH particle in grav calc */
@@ -2061,6 +2229,21 @@ int force_treeevaluate(int target, int mode, int *exportflag, int *exportnodecou
                 dx = nop->u.d.s[0] - pos_x; dy = nop->u.d.s[1] - pos_y; dz = nop->u.d.s[2] - pos_z;
                 GRAVITY_NEAREST_XYZ(dx,dy,dz,-1);
                 r2 = dx * dx + dy * dy + dz * dz;
+#ifdef TREE_RAD
+		gas_mass = mass;
+		if (isnan(gas_mass)) printf("Node mass is NaN %d\n", no);
+#ifdef TREE_RAD_H2
+		h2_mass = nop->u.d.h2mass;
+#endif
+#ifdef TREE_RAD_CO
+		co_mass = nop->u.d.comass;
+#endif
+#ifdef G0_VARIABLE
+		uv_lum = nop->u.d.uv_luminosity;
+#endif
+#endif
+
+
 #ifdef PMGRID
 #ifdef REDUCE_TREEWALK_BRANCHING
                 dxx = (nop->center[0] - pos_x); dyy = (nop->center[1] - pos_y); dzz = (nop->center[2] - pos_z);
@@ -2258,6 +2441,39 @@ int force_treeevaluate(int target, int mode, int *exportflag, int *exportnodecou
             if((r2 > 0) && (mass > 0)) // only go forward if mass positive and there is separation -- this is check for the whole block below, which should no include 'self' terms
             {
             r = sqrt(r2);
+#ifdef TREE_RAD
+	    // Do TreeCol projection
+	    if( (gas_mass > 0.) && (r < All.ShieldingLength) )
+	      {
+		long iheal;
+		double vec[3];
+		vec[0]=dx; vec[1]=dy; vec[2]=dz;
+		vec2pix_ring(NSIDE, vec, &iheal);
+		area = pixel_solid_angle * r2;
+		Projection[iheal] += gas_mass / area;
+#ifdef TREE_RAD_H2
+		ProjectionH2[iheal] += h2_mass / area;
+#endif
+#ifdef TREE_RAD_CO
+		ProjectionCO[iheal] += co_mass / area;
+#endif
+	      }
+
+#ifdef G0_VARIABLE
+	    if( uv_lum > 0.)
+	      {
+                long iheal;
+                double vec[3];
+                vec[0]=dx; vec[1]=dy; vec[2]=dz;
+                vec2pix_ring(NSIDE, vec, &iheal);
+		//area = pixel_solid_angle * r2;
+
+		uv_flux[iheal] += (uv_lum / r2);
+	      }
+#endif
+
+#endif //TREE_RAD
+
                 
             /* now we compute the actual pair-wise gravity terms */
             if((r >= h) && (r >= h_p)) // can safely do a purely-Newtonian force (can be done by kernel-gravity as well, but no need to enter all the conditional statements below so just do it here for simplicity //
@@ -2709,6 +2925,25 @@ int force_treeevaluate(int target, int mode, int *exportflag, int *exportnodecou
 #ifdef COMPUTE_JERK_IN_GRAVTREE
         {int i1; for(i1 = 0; i1 < 3; i1++) {P[target].GravJerk[i1] = jerk[i1];}}
 #endif
+#ifdef G0_VARIABLE
+	if (P[target].Type == 0)
+	  for (j=0; j<NPIX; j++)
+	    SphP[target].UV_flux[j] = uv_flux[j];
+#endif
+#ifdef TREE_RAD
+	if (P[target].Type == 0){
+	  for (j=0; j<NPIX; j++){
+	    SphP[target].Projection[j] = Projection[j];
+#ifdef TREE_RAD_H2
+	    SphP[target].ProjectionH2[j] = ProjectionH2[j];
+#endif
+#ifdef TREE_RAD_CO
+	    SphP[target].ProjectionCO[j] = ProjectionCO[j];
+#endif
+	  }
+	}
+#endif //TREE_RAD
+
 #ifdef BH_CALC_DISTANCES
         P[target].min_dist_to_bh = sqrt( min_dist_to_bh2 );
         P[target].min_xyz_to_bh[0] = min_xyz_to_bh[0];   /* remember, dx = x_BH - myx */
@@ -2779,6 +3014,22 @@ int force_treeevaluate(int target, int mode, int *exportflag, int *exportnodecou
 #ifdef COMPUTE_JERK_IN_GRAVTREE
         {int i1; for(i1 = 0; i1 < 3; i1++) {GravDataResult[target].GravJerk[i1] = jerk[i1];}}
 #endif
+#ifdef G0_VARIABLE
+	for (j=0; j<NPIX; j++) 
+	  GravDataResult[target].UV_flux[j] = uv_flux[j];
+#endif
+#ifdef TREE_RAD
+	for (j=0; j<NPIX; j++) {
+	  GravDataResult[target].Projection[j] = Projection[j];
+#ifdef TREE_RAD_H2
+	  GravDataResult[target].ProjectionH2[j] = ProjectionH2[j];
+#endif
+#ifdef TREE_RAD_CO
+	  GravDataResult[target].ProjectionCO[j] = ProjectionCO[j];
+#endif
+	}
+#endif //TREE_RAD
+
 #ifdef BH_CALC_DISTANCES
         GravDataResult[target].min_dist_to_bh = sqrt( min_dist_to_bh2 );
         GravDataResult[target].min_xyz_to_bh[0] = min_xyz_to_bh[0];   /* remember, dx = x_BH - myx */

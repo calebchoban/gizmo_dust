@@ -366,7 +366,7 @@ double domain_particle_cost_multiplier(int i)
         if(multiplier < 0.5) {multiplier = 0.5;} // floor //
     } // end gas check
 
-#if defined(GALSF) /* with star formation active, we will up-weight star particles which are active feedback sources */
+#if defined(GALSF) && !defined(STOCHASTIC_IMF)/* with star formation active, we will up-weight star particles which are active feedback sources */
 #ifndef CHIMES /* With CHIMES, the chemistry dominates the cost, so we boost (dense) gas but not stars. */
     if(((P[i].Type == 4)||((All.ComovingIntegrationOn==0)&&((P[i].Type == 2)||(P[i].Type==3))))&&(P[i].Mass>0))
     {

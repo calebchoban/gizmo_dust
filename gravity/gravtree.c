@@ -399,6 +399,28 @@ void gravity_tree(void)
 #endif                
 #endif
 #endif // BH_CALC_DISTANCES
+#ifdef G0_VARIABLE
+		    if(Ewald_iter==0 && P[place].Type==0)
+		      for(k = 0; k < NPIX; k++)
+			SphP[place].UV_flux[k] += GravDataOut[j].UV_flux[k];
+#endif
+#ifdef TREE_RAD
+		    if (Ewald_iter==0){
+		      if (P[place].Type == 0)
+			{
+			  for(k = 0; k < NPIX; k++)
+			    {
+			      SphP[place].Projection[k]   += GravDataOut[j].Projection[k];
+#ifdef TREE_RAD_H2
+			      SphP[place].ProjectionH2[k] += GravDataOut[j].ProjectionH2[k];
+#endif
+#ifdef TREE_RAD_CO
+			      SphP[place].ProjectionCO[k] += GravDataOut[j].ProjectionCO[k];
+#endif
+			    }
+			}    
+		    }
+#endif //TREE_RAD
 
 #ifdef RT_USE_TREECOL_FOR_NH
                 int kbin=0; for(kbin=0; kbin < RT_USE_TREECOL_FOR_NH; kbin++) {P[place].ColumnDensityBins[kbin] += GravDataOut[j].ColumnDensityBins[kbin];}

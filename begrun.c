@@ -13,6 +13,9 @@
 #include "proto.h"
 #include "kernel.h"
 
+#ifdef CHEMCOOL
+#include "sg_chemistry/f2c.h"
+#endif
 
 /*! \file begrun.c
  *  \brief initial set-up of a simulation run
@@ -190,7 +193,13 @@ void begrun(void)
 
   random_generator = gsl_rng_alloc(gsl_rng_ranlxd1);
 
-  gsl_rng_set(random_generator, 42 + ThisTask);	/* start-up seed */
+//  gsl_rng_set(random_generator, 42 + ThisTask);	/* start-up seed */
+
+#if defined RANDOM_SN_INJECT || defined SAMPLE_IMF || defined SAMPLE_IMF_FROM_GAS || defined STOCHASTIC_IMF
+  gsl_rng_set(random_generator, ThisTask);      /* start-up seed */
+#else
+  gsl_rng_set(random_generator, 42 + ThisTask);    /* start-up seed */
+#endif
 
   set_random_numbers();
 
@@ -443,6 +452,47 @@ void begrun(void)
 #ifdef GALSF_EFFECTIVE_EQS
   init_clouds();
 #endif
+
+#ifdef CHEMCOOL
+  COOLR.abundc  = All.InitialMetallicity * 1.41e-4;
+  COOLR.abundo  = All.InitialMetallicity * 3.16e-4;
+  COOLR.abundsi = All.InitialMetallicity * 1.50e-5;
+  COOLR.G0      = All.G0;
+  COOLR.dust_to_gas_ratio = All.DGRnormalized;
+#ifdef DGR_SCALE_WITH_Z
+  COOLR.dust_to_gas_ratio = 1.0 / (1.0 / All.InitialMetallicity + 1.0 / ( 0.2 * pow((All.InitialMetallicity/0.2),3) ) );
+  if(ThisTask == 0)
+    printf("Z = %g, DGR = %g\n", All.InitialMetallicity, COOLR.dust_to_gas_ratio);
+#endif
+  COOLR.cosmic_ray_ion_rate  = All.CosmicRayIonRate;
+  COOLI.iphoto     = All.PhotochemApprox;
+
+  //COOLR.tdust = 10.; //this is initialized in init.c from SphP[i].DustTemp;
+  COOLR.AV_ext  = 0;
+  COOLR.deff    = 1;
+  COOLR.abundD  = 2.6e-05;
+  COOLR.abundM  = 0;
+  COOLR.abundN  = 0;
+  COOLR.phi_pah = 1;
+  COOLR.AV_conversion_factor = 5.348e-22;
+  COOLR.redshift   = 0;
+  COOLR.pdv_term   = 0.0;
+  COOLR.h2_form_ex  = 0.84;
+  COOLR.h2_form_kin = 0.12;
+  COOLR.dm_density  = 0.0;
+  COOLI.iflag_mn   = 1;
+  COOLI.iflag_ad   = 1;
+  COOLI.iflag_atom = 2;
+  COOLI.iflag_3bh2a = 1;
+  COOLI.iflag_3bh2b = 1;
+  COOLI.iflag_h3pra = 1;
+  COOLI.idma_mass_option = 0;
+  COOLI.no_chem = 0;
+  COOLI.irad_heat = 0;
+  COOLI.isrf_option = 1;
+
+  chemcool_init();
+#endif /* CHEMCOOL */
 
   char contfname[1000];
   sprintf(contfname, "%scont", All.OutputDir);
@@ -703,6 +753,24 @@ void open_outputfiles(void)
     fprintf(FdBalance, "MultiDiff-misc = '%c' / '%c'\n", CPU_Symbol[CPU_IMPROVDIFFMISC], CPU_SymbolImbalance[CPU_IMPROVDIFFMISC]);
     fprintf(FdBalance, "Miscellaneous  = '%c' / '%c'\n", CPU_Symbol[CPU_MISC], CPU_SymbolImbalance[CPU_MISC]);
     fprintf(FdBalance, "\n");
+#endif
+
+#if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK
+  sprintf(buf, "%s%s", All.OutputDir, "SNinfo.txt");
+  if(!(FdSNinfo = fopen(buf, mode)))
+    {
+      printf("error in opening file '%s'\n", buf);
+      endrun(1);
+    }
+#endif
+
+#if defined OUTPUT_STARFORMATION_INFO
+  sprintf(buf, "%s%s", All.OutputDir, "SFinfo.txt");
+  if(!(FdSFinfo = fopen(buf, mode)))
+    {
+      printf("error in opening file '%s'\n", buf);
+      endrun(1);
+    }
 #endif
 
 #ifdef GALSF
@@ -1848,6 +1916,145 @@ void read_parameter_file(char *fname)
 #ifdef DM_FUZZY
         strcpy(tag[nt], "FuzzyDM_Mass_in_eV");
         addr[nt] = &All.ScalarField_hbar_over_mass;
+        id[nt++] = REAL;
+#endif
+
+#ifdef CHEMCOOL
+        strcpy(tag[nt], "InitMolHydroAbund");
+        addr[nt] = &All.InitMolHydroAbund;
+        id[nt++] = REAL;
+
+        strcpy(tag[nt], "InitHPlusAbund");
+        addr[nt] = &All.InitHPlusAbund;
+        id[nt++] = REAL;
+
+        strcpy(tag[nt], "InitCOAbund");
+        addr[nt] = &All.InitCOAbund;
+        id[nt++] = REAL;
+
+        strcpy(tag[nt], "InitialMetallicity");
+        addr[nt] = &All.InitialMetallicity;
+        id[nt++] = REAL;
+
+        strcpy(tag[nt], "DGRnormalized");
+        addr[nt] = &All.DGRnormalized;
+        id[nt++] = REAL;
+
+        strcpy(tag[nt], "G0");
+        addr[nt] = &All.G0;
+        id[nt++] = REAL;
+
+        strcpy(tag[nt], "CosmicRayIonRate");
+        addr[nt] = &All.CosmicRayIonRate;
+        id[nt++] = REAL;
+
+        strcpy(tag[nt], "PhotochemApprox");
+        addr[nt] = &All.PhotochemApprox;
+        id[nt++] = INT;
+#endif
+
+#ifdef TREE_RAD
+        strcpy(tag[nt],"ShieldingLength");
+        addr[nt]=&All.ShieldingLength;
+        id[nt++]=REAL;
+#endif
+
+#if defined RANDOM_SN_INJECT
+#ifndef MULTI_SN_INJECT
+        strcpy(tag[nt], "RateSN");  // SN rate in Myr^-1
+        addr[nt] = &All.RateSN;
+        id[nt++] = REAL;
+
+        strcpy(tag[nt], "InitDensity");  // in code unit
+        addr[nt] = &All.InitDensity;
+        id[nt++] = REAL;
+
+        strcpy(tag[nt], "DensScaleIndex");
+        addr[nt] = &All.DensScaleIndex;
+        id[nt++] = REAL;
+#endif
+#endif
+
+#if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK
+        strcpy(tag[nt], "FacNumNgbSN");  // FacNumNgbSN=1 means the same as SPH kernel
+        addr[nt] = &All.FacNumNgbSN;
+        id[nt++] = REAL;
+#endif
+
+#ifdef STELLAR_FEEDBACK
+        strcpy(tag[nt], "LifeTimeSNII");
+        addr[nt] = &All.LifeTimeSNII;
+        id[nt++] = REAL;
+
+        //MassPerStarIMF=93  for MinMassIMF=8
+        //MassPerStarIMF=49  for MinMassIMF=5
+        //MassPerStarIMF=36  for MinMassIMF=4
+        //MassPerStarIMF=24  for MinMassIMF=3
+        //MassPerStarIMF=14  for MinMassIMF=2
+        //MassPerStarIMF=5.7 for MinMassIMF=1
+        //MassPerStarIMF=2.3 for MinMassIMF=0.5
+        strcpy(tag[nt], "MassPerStarIMF");
+        addr[nt] = &All.MassPerStarIMF;
+        id[nt++] = REAL;
+#endif
+
+#ifdef STOCHASTIC_IMF
+        strcpy(tag[nt], "MaxMassIMF");
+        addr[nt] = &All.MaxMassIMF;
+        id[nt++] = REAL;
+        strcpy(tag[nt], "MinMassIMF");
+        addr[nt] = &All.MinMassIMF;
+        id[nt++] = REAL;
+#endif
+
+#ifdef INSTANT_SN_FEEDBACK_FOR_SOME_TIME
+        strcpy(tag[nt], "TimeInstantSN");
+        addr[nt] = &All.TimeInstantSN;
+        id[nt++] = REAL;
+#endif
+
+#ifdef MULTI_SN_INJECT
+        strcpy(tag[nt], "TimeIntervalSN");
+        addr[nt] = &All.TimeIntervalSN;
+        id[nt++] = REAL;
+
+        strcpy(tag[nt], "NumOfSN");
+        addr[nt] = &All.NumOfSN;
+        id[nt++] = INT;
+#endif
+
+#if defined SAMPLE_IMF || defined SAMPLE_IMF_FROM_GAS
+        strcpy(tag[nt], "TimeIntervalIMFSample");
+        addr[nt] = &All.TimeIntervalIMFSample;
+        id[nt++] = REAL;
+
+        strcpy(tag[nt], "SearchingRadius");
+        addr[nt]=&All.SearchingRadius;
+        id[nt++]=REAL;
+
+        strcpy(tag[nt], "MassTolerance");
+        addr[nt]=&All.MassTolerance;
+        id[nt++]=REAL;
+
+        strcpy(tag[nt], "IMFSampleStellarMassCut");
+        addr[nt] = &All.IMFSampleStellarMassCut;
+        id[nt++] = REAL;
+#endif
+
+#ifdef JEANS_LENGTH_THRESHOLD
+        strcpy(tag[nt], "SfThreshJeansLength");
+        addr[nt] = &All.SfThreshJeansLength;
+        id[nt++] = REAL;
+#endif
+#ifdef JEANS_MASS_THRESHOLD
+        strcpy(tag[nt], "FacSfThreshMJ");
+        addr[nt] = &All.FacSfThreshMJ;
+        id[nt++] = REAL;
+#endif
+
+#ifdef SF_INSTANT_CUTOFF
+        strcpy(tag[nt], "nHcutoffSF");
+        addr[nt] = &All.nHcutoffSF;
         id[nt++] = REAL;
 #endif
 

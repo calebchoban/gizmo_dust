@@ -23,7 +23,8 @@
  */
 
 
-#ifdef GALSF // top-level switch for compiling the routines below //
+//#ifdef GALSF // top-level switch for compiling the routines below //
+#if defined(GALSF) && !defined(STOCHASTIC_IMF) // top-level switch for compiling the routines below //
 
 
 #if defined(GALSF_SFR_IMF_VARIATION) || defined(GALSF_SFR_IMF_SAMPLING)

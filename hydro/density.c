@@ -44,7 +44,7 @@ int density_isactive(int n)
 #if defined(RT_SOURCE_INJECTION)
     if((1 << P[n].Type) & (RT_SOURCES))
     {
-#if defined(GALSF)
+#if defined(GALSF) && !defined(STOCHASTIC_IMF)
        if(((P[n].Type == 4)||((All.ComovingIntegrationOn==0)&&((P[n].Type == 2)||(P[n].Type==3))))&&(P[n].Mass>0))
         {
             double star_age = evaluate_stellar_age_Gyr(n);
@@ -73,7 +73,7 @@ int density_isactive(int n)
 #endif
 #endif
         
-#if defined(GALSF)
+#if defined(GALSF) && !defined(STOCHASTIC_IMF)
         if(P[n].DensAroundStar <= 0) return 1;
         if(All.ComovingIntegrationOn == 0) // only do stellar age evaluation if we have to //
         {

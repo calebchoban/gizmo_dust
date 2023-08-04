@@ -248,7 +248,57 @@ void calculate_non_standard_physics(void)
     //compute_stellar_feedback();
 #endif
 
-    
+#ifdef STELLAR_FEEDBACK
+    update_weights(); //get hsml of stars
+    stellarfeedback(); //dump SN energy
+#ifdef PHOTO_IONIZATION
+    photoionize();
+#endif
+#ifdef DUST_IN_AGB
+    agb_feedback(); //AGB enrichment     
+#endif
+#endif
+
+#ifdef RANDOM_SN_INJECT
+    update_weights();
+    random_SN_inject();
+#endif
+
+#if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK 
+    // No need to recompute density because densities won't change by adding feedback energy,              
+    // not even in kinetic form (kicking particles won't change densities)                                 
+    //compute_densities();                                                                                 
+    int count, tot_count;
+    count = 0;
+    for(int i=0; i<N_gas; i++)
+      if(SphP[i].flagFBinj == 1)
+        count++;
+    //printf("ID=%llu\n", P[i].ID);
+    //printf("ThisTask=%d   count=%d\n", ThisTask, count);
+    MPI_Allreduce(&count, &tot_count, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+    if(tot_count > 0){
+      if(ThisTask == 0)
+        printf("Recompute hydro as we have %d feedback-affected particles\n", tot_count);
+      compute_hydro_densities_and_forces();
+      //#ifdef DUST_ONE_FLUID
+      //compute_dust_drag_force();  //calculate the relative acceleration between dust and gas
+      //#endif
+    }
+
+    for(int i=0; i<N_gas; i++)
+      SphP[i].flagFBinj = 0; //reset to zero    
+#endif
+
+#ifdef DUST_ONE_FLUID
+    if(ThisTask == 0)
+      printf("before dust_evolution()...\n");
+    dust_evolution();
+    if(ThisTask == 0)
+      printf("after dust_evolution()...\n");
+#endif
+
+
 #ifdef BLACK_HOLES /***** black hole accretion and feedback *****/
     CPU_Step[CPU_MISC] += measure_time();
     blackhole_accretion();

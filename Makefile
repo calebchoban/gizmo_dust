@@ -700,6 +700,7 @@ OPT      +=  -DMPICH_IGNORE_CXX_SEEK
 #OPTIMIZE =   -std=c99 -O3 -fno-tree-vectorize -march=native -Wno-implicit-function-declaration -Wno-cpp
 OPTIMIZE =   -std=c99 -O2 -fno-tree-vectorize -march=native -Wno-implicit-function-declaration -Wno-cpp
 OPTIMIZE += -g   #-Wall # compiler warnings
+FC      = mpifort
 ifeq (OPENMP,$(findstring OPENMP,$(CONFIGVARS)))
 OPTIMIZE +=  -fopenmp
 endif
@@ -719,6 +720,26 @@ GMP_LIBs =  #-L$(GMPDIR)/lib
 #module add lib/fftw2/2.1.5-openmpi2
 #module add lib/gsl
 endif
+
+ifeq ($(SYSTYPE),"RUSTY")
+CC       =   mpicc
+ifeq (SOFTDOUBLEDOUBLE,$(findstring SOFTDOUBLEDOUBLE,$(OPT)))
+CC       =   mpicxx
+endif
+FC      = mpifort
+OPTIMIZE =  -O2 -g -Wall -m64 -wd981 -wd2259 -wd1572
+OPTIMIZE = -O2 -g -m64 -Wall
+OPTIMIZE  = -g -O2
+GSL_INCL = -I$(GSL_BASE)/include
+GSL_LIBS = -L$(GSL_BASE)/lib -Xlinker -R -Xlinker $(GSL_BASE) -lgsl -lgslcblas
+FFTW_INCL= -I$(FFTW3_BASE)/include
+FFTW_LIBS= -L$(FFTW3_BASE)/lib -Xlinker -R -Xlinker $(FFTW3_BASE)/lib
+MPICHLIB =
+HDF5INCL = -I$(HDF5_BASE)/include -DH5_USE_16_API
+HDF5LIB  = -L$(HDF5_BASE)/lib -Xlinker -R -Xlinker $(HDF5_BASE)/lib -lhdf5 -lz
+
+endif
+
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
@@ -1262,6 +1283,7 @@ EOSCOOL_OBJS =  cooling/cooling.o \
 				nuclear/nuclear_network.o 
 
 STARFORM_OBJS = galaxy_sf/sfr_eff.o \
+		galaxy_sf/sfr_simple.o\
                 galaxy_sf/stellar_evolution.o \
                 galaxy_sf/mechanical_fb.o \
                 galaxy_sf/thermal_fb.o \
@@ -1374,6 +1396,47 @@ GRACKLEINCL =
 GRACKLELIBS =
 endif
 
+ifeq (STELLAR_FEEDBACK,$(findstring STELLAR_FEEDBACK,$(CONFIGVARS)))
+OBJS    += stellarfeedback.o update_weights.o
+endif
+
+ifeq (PHOTO_IONIZATION,$(findstring PHOTO_IONIZATION,$(CONFIGVARS)))
+OBJS    += photoionize.o
+endif
+
+ifeq (STOCHASTIC_IMF,$(findstring STOCHASTIC_IMF,$(CONFIGVARS)))
+OBJS    += stellar_properties.o
+endif
+
+ifeq (SAMPLE_IMF,$(findstring SAMPLE_IMF,$(CONFIGVARS)))
+OBJS    += imf_sampling.o stellar_properties.o
+endif
+
+ifeq (SAMPLE_IMF_FROM_GAS,$(findstring SAMPLE_IMF_FROM_GAS,$(CONFIGVARS)))
+OBJS    += imf_sampling_gas.o stellar_properties.o
+endif
+
+ifeq (RANDOM_SN_INJECT,$(findstring RANDOM_SN_INJECT,$(CONFIGVARS)))
+OBJS    += random_SN_inject.o update_weights.o
+endif
+
+ifeq (DUST_ONE_FLUID,$(findstring DUST_ONE_FLUID,$(CONFIGVARS)))
+OBJS    += drag_force.o
+endif
+
+ifeq (DUST_IN_AGB,$(findstring DUST_IN_AGB,$(CONFIGVARS)))
+OBJS    += agb_enrich.o
+endif
+
+ifeq (CHEMCOOL,$(findstring CHEMCOOL,$(CONFIGVARS)))
+OBJS    += sg_chemistry/chemcool.o
+FOBJS   +=  sg_chemistry/coolinmo.o sg_chemistry/cheminmo.o sg_chemistry/spline.o sg_chemistry/cool_func.o sg_chemistry/photoinit_ism.o \
+        sg_chemistry/dvode.o sg_chemistry/evolve_abundances.o sg_chemistry/rate_eq_simple.o sg_chemistry/jac.o sg_chemistry/cool_util.o \
+        sg_chemistry/const_rates.o sg_chemistry/validate_rates.o sg_chemistry/calc_photo.o sg_chemistry/calc_temp.o \
+        sg_chemistry/compute_gamma.o sg_chemistry/wss_z_collis.o
+#INCL   +=  sg_chemistry/.h
+endif
+
 # linking libraries (includes machine-dependent options above)
 CFLAGS = $(OPTIONS) $(GSL_INCL) $(FFTW_INCL) $(HDF5INCL) $(GMP_INCL) \
          $(GRACKLEINCL) $(CHIMESINCL)
@@ -1427,13 +1490,30 @@ ifeq (PTHREADS_NUM_THREADS,$(findstring PTHREADS_NUM_THREADS,$(CONFIGVARS)))
 LIBS += -lpthread
 endif
 
-$(EXEC): $(OBJS) $(FOBJS)  
-	$(FC) $(OPTIMIZE) $(OBJS) $(FOBJS) $(LIBS) $(RLIBS) -o $(EXEC)
+ifeq (NEED_HEALPIX ,$(findstring NEED_HEALPIX,$(CONFIGVARS)))
+CFLAGS += $(HEALPIX_INCL)
+LIBS   += $(HEALPIX_LIB)
+endif
+
+ifeq (NEED_HEALPIX ,$(findstring NEED_HEALPIX,$(CONFIGVARS)))
+CFLAGS += -I$(HEALPIX_BASE)/include
+LIBS   += -L$(HEALPIX_BASE)/lib -lchealpix
+endif
+
+$(EXEC): $(OBJS) $(FOBJS)
+#####   $(CC) $(OPTIMIZE) $(OBJS) $(FOBJS) $(LIBS) $(RLIBS) -o $(EXEC)
+	$(FC) $(FOPTIMIZE) $(OBJS) $(FOBJS) $(LIBS) $(RLIBS) -o $(EXEC)
+
+#$(EXEC): $(OBJS) $(FOBJS)  
+#	$(FC) $(OPTIMIZE) $(OBJS) $(FOBJS) $(LIBS) $(RLIBS) -o $(EXEC)
 
 $(OBJS): $(INCL)  $(CONFIG)  compile_time_info.c
 
-$(FOBJS): %.o: %.f90
-	$(FC) $(OPTIMIZE) -c $< -o $@
+#$(FOBJS): %.o: %.f90
+#	$(FC) $(OPTIMIZE) -c $< -o $@
+
+$(FOBJS): %.o: %.F
+	$(FC) $(FOPTIMIZE) -c $< -o $@
 
 compile_time_info.c: $(CONFIG)
 	$(PERL) prepare-config.perl $(CONFIG)

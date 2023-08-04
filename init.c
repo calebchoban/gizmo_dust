@@ -179,6 +179,24 @@ void init(void)
     init_self_interactions();
 #endif
 
+#if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK
+        if((RestartFlag == 0) || (RestartFlag == 2))
+          {
+            if(P[i].Type == 4)
+              P[i].flag_SNII = -1;    //0: not yet; 1: exploding; -1: exploded
+            else
+              P[i].flag_SNII = 0;    //0: not yet; 1: exploding; -1: exploded
+          }
+#endif
+#if defined STELLAR_FEEDBACK
+        P[i].DensAroundStar_new = 0.;
+        P[i].InternalEnergyAroundStar = 0.;
+#endif
+
+#ifdef G0_VARIABLE
+        P[i].UV_luminosity = 0.0;
+#endif
+
 #ifdef METALS
     for(j=0;j<NUM_METAL_SPECIES;j++) {All.SolarAbundances[j]=0;} // initialize all to zero
     All.SolarAbundances[0]=0.02;        // all metals (by mass); present photospheric abundances from Asplund et al. 2009 (Z=0.0134, proto-solar=0.0142) in notes;
@@ -531,7 +549,12 @@ void init(void)
     {
         SphP[i].InternalEnergyPred = SphP[i].InternalEnergy;
 
-        for(j = 0; j < 3; j++)
+#if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK
+        //SphP[i].flagSN = 0;       //marked as SN site
+        SphP[i].flagFBinj = 0;    //for the timestep limiter
+#endif
+
+	for(j = 0; j < 3; j++)
         {
             SphP[i].VelPred[j] = P[i].Vel[j];
             SphP[i].HydroAccel[j] = 0;
@@ -892,6 +915,18 @@ void init(void)
         SphP[i].Super_Timestep_Dt_Explicit = 0;
         SphP[i].Super_Timestep_j = 0;
 #endif
+
+#ifdef CHEMCOOL
+        SphP[i].DustTemp = 10.;
+        SphP[i].TracAbund[IH2] = All.InitMolHydroAbund;
+        SphP[i].TracAbund[IHP] = All.InitHPlusAbund;
+        SphP[i].TracAbund[ICO] = All.InitCOAbund;
+#endif
+#ifdef G0_VARIABLE
+        for (j = 0; j < NPIX; j++){
+          SphP[i].UV_flux[j] = 0.0;
+        }
+#endif	
 #ifdef GALSF_FB_FIRE_RT_UVHEATING
         SphP[i].Rad_Flux_UV = 0;
         SphP[i].Rad_Flux_EUV = 0;

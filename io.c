@@ -482,7 +482,7 @@ void fill_write_buffer(enum iofields blocknr, int *startindex, int pc, int type)
             break;
 
         case IO_SFR:		/* star formation rate */
-#ifdef GALSF
+#if defined GALSF && !defined(STOCHASTIC_IMF) 
             for(n = 0; n < pc; pindex++)
                 if(P[pindex].Type == type)
                 {   /* units convert to solar masses per yr */
@@ -557,6 +557,121 @@ void fill_write_buffer(enum iofields blocknr, int *startindex, int pc, int type)
                 }
 #endif
             break;
+
+#if defined (TREE_RAD) && defined (OUTPUTCOL)
+    case IO_TREE_RAD:
+      for(n = 0; n < pc; pindex++)
+        if(P[pindex].Type == type){
+          for(k = 0; k < NPIX; k++)
+            *fp++ = SphP[pindex].Projection[k];
+          n++;
+        }
+      break;
+    case IO_TREE_RAD_H2:
+      for(n = 0; n < pc; pindex++)
+        if(P[pindex].Type == type){
+          for(k = 0; k < NPIX; k++)
+            *fp++ = SphP[pindex].ProjectionH2[k];
+          n++;
+        }
+      break;
+    case IO_TREE_RAD_CO:
+      for(n = 0; n < pc; pindex++)
+        if(P[pindex].Type == type){
+          for(k = 0; k < NPIX; k++)
+            *fp++ = SphP[pindex].ProjectionCO[k];
+          n++;
+        }
+      break;
+#endif //TREE_RAD
+
+#ifdef G0_VARIABLE
+    case IO_FLUX:
+      {
+      double u_Habing = 5.29e-14; //Habing field, in erg cm^-3
+      double fac_flux2habing = 1.0 / (4. * M_PI * C_LIGHT_CODE * pow(All.UnitLength_in_cm, 2) ) / u_Habing;
+      for(n = 0; n < pc; pindex++)
+        if(P[pindex].Type == type){
+          double G0 = 0.;
+          for(k = 0; k < NPIX; k++)
+            G0 += DMAX(SphP[pindex].UV_flux[k] * fac_flux2habing, 0.324e-2/NPIX); //cosmic UV background
+          *fp++ = G0;
+          n++;
+        }
+      break;
+      }//define a scope so we can declare new variables
+#endif
+
+#ifdef CHEMCOOL
+    case IO_SG_CHEM:
+      for(n = 0; n < pc; pindex++)
+        if(P[pindex].Type == type){
+          for(k = 0; k < TRAC_NUM; k++)
+            *fp++ = SphP[pindex].TracAbund[k];
+          n++;
+        }
+      break;
+
+    case IO_SG_DUST_TEMP:
+      for(n = 0; n < pc; pindex++)
+        if(P[pindex].Type == type){
+          *fp++ = SphP[pindex].DustTemp;
+          n++;
+        }
+      break;
+#ifdef OUTPUT_INDIVIDUAL_COOLRATES
+    case IO_COOLRATES:
+      for(n = 0; n < pc; pindex++)
+        if(P[pindex].Type == type)
+          {
+            for(k = 0; k < 28; k++)
+              *fp++ = SphP[pindex].Lambda[k];
+            n++;
+          }
+      break;
+    case IO_CHEM_COOLRATES:
+      for(n = 0; n < pc; pindex++)
+        if(P[pindex].Type == type)
+          {
+            for(k = 0; k < 6; k++)
+              *fp++ = SphP[pindex].LambdaChem[k];
+            n++;
+          }
+      break;
+#endif
+#ifdef OUTPUT_SHIELD_FAC
+    case IO_SHIELD_FAC_H2:
+      for(n = 0; n < pc; pindex++)
+        if(P[pindex].Type == type){
+          *fp++ = SphP[pindex].Fac_shield_h2;
+          n++;
+        }
+      break;
+    case IO_SHIELD_FAC_DUST:
+      for(n = 0; n < pc; pindex++)
+        if(P[pindex].Type == type){
+          *fp++ = SphP[pindex].Fac_shield_dust;
+          n++;
+        }
+      break;
+#endif
+#endif //CHEMCOOL
+
+#ifdef OUTPUT_VELGRAD
+    case IO_VELGRAD:
+      for(n = 0; n < pc; pindex++)
+        if(P[pindex].Type == type)
+          {
+            for(k = 0; k < 3; k++)
+              {
+                for(int l = 0; l < 3; l++)
+                  fp[3*k + l] = SphP[pindex].Gradients.Velocity[k][l];
+              }
+            fp += 9;
+            n++;
+          }
+      break;
+#endif
 
         case IO_VSTURB_DISS:
 #if defined(TURB_DRIVING)
@@ -1963,6 +2078,20 @@ int get_bytes_per_blockelement(enum iofields blocknr, int mode)
         case IO_AGS_ZETA:
         case IO_VSTURB_DISS:
         case IO_VSTURB_DRIVE:
+        case IO_MG_PHI:
+#ifdef COOL_GRACKLE
+        case IO_TEMP:
+#endif
+#ifdef G0_VARIABLE
+        case IO_FLUX:
+#endif	    
+#ifdef CHEMCOOL
+        case IO_SG_DUST_TEMP:
+#ifdef OUTPUT_SHIELD_FAC
+        case IO_SHIELD_FAC_H2:
+        case IO_SHIELD_FAC_DUST:
+#endif
+#endif
         case IO_grHI:
         case IO_grHII:
         case IO_grHM:
@@ -2056,6 +2185,65 @@ int get_bytes_per_blockelement(enum iofields blocknr, int mode)
                 bytes_per_blockelement = (NUM_METAL_SPECIES) * sizeof(MyOutputFloat);
 #endif
             break;
+
+#if defined (TREE_RAD) && defined (OUTPUTCOL)
+    case IO_TREE_RAD:
+      if(mode)
+        bytes_per_blockelement = NPIX * sizeof(MyInputFloat);
+      else
+        bytes_per_blockelement = NPIX * sizeof(MyOutputFloat);
+      break;
+#ifdef TREE_RAD_H2
+    case IO_TREE_RAD_H2:
+      if(mode)
+        bytes_per_blockelement = NPIX * sizeof(MyInputFloat);
+      else
+        bytes_per_blockelement = NPIX * sizeof(MyOutputFloat);
+      break;
+#endif
+#ifdef TREE_RAD_CO
+    case IO_TREE_RAD_CO:
+      if(mode)
+        bytes_per_blockelement = NPIX * sizeof(MyInputFloat);
+      else
+        bytes_per_blockelement = NPIX * sizeof(MyOutputFloat);
+      break;
+#endif
+#endif //TREE_RAD
+
+#ifdef CHEMCOOL
+    case IO_SG_CHEM:
+      if(mode)
+        bytes_per_blockelement = TRAC_NUM * sizeof(MyInputFloat);
+      else
+        bytes_per_blockelement = TRAC_NUM * sizeof(MyOutputFloat);
+      break;
+
+#ifdef OUTPUT_INDIVIDUAL_COOLRATES
+    case IO_COOLRATES:
+      if(mode)
+        bytes_per_blockelement = 28 * sizeof(MyInputFloat);
+      else
+        bytes_per_blockelement = 28 * sizeof(MyOutputFloat);
+      break;
+
+    case IO_CHEM_COOLRATES:
+      if(mode)
+        bytes_per_blockelement = 6 * sizeof(MyInputFloat);
+      else
+        bytes_per_blockelement = 6 * sizeof(MyOutputFloat);
+      break;
+#endif
+#endif
+
+#ifdef OUTPUT_VELGRAD
+    case IO_VELGRAD:
+      if(mode)
+        bytes_per_blockelement = 9 * sizeof(MyInputFloat);
+      else
+        bytes_per_blockelement = 9 * sizeof(MyOutputFloat);
+      break;
+#endif
 
             case IO_DUSTCHEMZMET:
 #if defined(GALSF_ISMDUSTCHEM_MODEL)
@@ -2280,6 +2468,19 @@ int get_values_per_blockelement(enum iofields blocknr)
         case IO_AGS_PSI_RE:
         case IO_AGS_PSI_IM:
         case IO_AGS_ZETA:
+#ifdef COOL_GRACKLE
+        case IO_TEMP:
+#endif
+#ifdef G0_VARIABLE
+        case IO_FLUX:
+#endif
+#ifdef CHEMCOOL
+        case IO_SG_DUST_TEMP:
+#ifdef OUTPUT_SHIELD_FAC
+        case IO_SHIELD_FAC_H2:
+        case IO_SHIELD_FAC_DUST:
+#endif
+#endif
         case IO_VSTURB_DISS:
         case IO_VSTURB_DRIVE:
         case IO_grHI:
@@ -2305,7 +2506,11 @@ int get_values_per_blockelement(enum iofields blocknr)
         case IO_MOLECULARFRACTION:
             values = 1;
             break;
-
+#ifdef OUTPUT_VELGRAD
+        case IO_VELGRAD:
+            values = 9;
+            break;
+#endif
         case IO_COSMICRAY_ENERGY:
         case IO_COSMICRAY_SLOPES:
         case IO_COSMICRAY_KAPPA:
@@ -2349,6 +2554,38 @@ int get_values_per_blockelement(enum iofields blocknr)
             values = NUM_METAL_SPECIES;
 #endif
             break;
+
+#if defined (TREE_RAD) && defined (OUTPUTCOL)
+    case IO_TREE_RAD:
+      values = NPIX;
+      break;
+#ifdef TREE_RAD_H2
+    case IO_TREE_RAD_H2:
+      values = NPIX;
+      break;
+#endif
+#ifdef TREE_RAD_CO
+    case IO_TREE_RAD_CO:
+      values = NPIX;
+      break;
+#endif
+#endif
+
+#ifdef CHEMCOOL
+    case IO_SG_CHEM:
+      values = TRAC_NUM;
+      break;
+
+#ifdef OUTPUT_INDIVIDUAL_COOLRATES
+    case IO_COOLRATES:
+      values = 28;
+      break;
+
+    case IO_CHEM_COOLRATES:
+      values = 6;
+      break;
+#endif
+#endif
 
         case IO_DUSTCHEMZMET:
 #if defined(GALSF_ISMDUSTCHEM_MODEL)
@@ -2528,6 +2765,37 @@ long get_particles_in_block(enum iofields blocknr, int *typelist)
         case IO_PRESSURE:
         case IO_VSTURB_DISS:
         case IO_VSTURB_DRIVE:
+#ifdef OUTPUT_VELGRAD
+        case IO_VELGRAD:
+#endif
+#ifdef G0_VARIABLE
+        case IO_FLUX:
+#endif
+#ifdef COOL_GRACKLE
+        case IO_TEMP:
+#endif
+#if defined (TREE_RAD) && defined (OUTPUTCOL)
+    case IO_TREE_RAD:
+#ifdef TREE_RAD_H2
+    case IO_TREE_RAD_H2:
+#endif
+#ifdef TREE_RAD_CO
+    case IO_TREE_RAD_CO:
+#endif
+#endif
+
+#ifdef CHEMCOOL
+        case IO_SG_CHEM:
+        case IO_SG_DUST_TEMP:
+#ifdef OUTPUT_SHIELD_FAC
+        case IO_SHIELD_FAC_H2:
+        case IO_SHIELD_FAC_DUST:
+#endif
+#ifdef OUTPUT_INDIVIDUAL_COOLRATES
+        case IO_COOLRATES:
+        case IO_CHEM_COOLRATES:
+#endif
+#endif
         case IO_grHI:
         case IO_grHII:
         case IO_grHM:
@@ -2744,6 +3012,43 @@ int blockpresent(enum iofields blocknr)
 #endif
             break;
 
+#ifdef G0_VARIABLE
+    case IO_FLUX:
+      return 1;
+      break;
+#endif
+
+#if defined (TREE_RAD) && defined (OUTPUTCOL)
+    case IO_TREE_RAD:
+#ifdef TREE_RAD_H2
+    case IO_TREE_RAD_H2:
+#endif
+#ifdef TREE_RAD_CO
+    case IO_TREE_RAD_CO:
+#endif
+      return 1;
+      break;
+#endif
+
+#ifdef CHEMCOOL
+        case IO_SG_CHEM:
+        case IO_SG_DUST_TEMP:
+#ifdef OUTPUT_INDIVIDUAL_COOLRATES
+        case IO_COOLRATES:
+        case IO_CHEM_COOLRATES:
+#endif
+#ifdef OUTPUT_SHIELD_FAC
+        case IO_SHIELD_FAC_H2:
+        case IO_SHIELD_FAC_DUST:
+#endif
+      return 1;
+      break;
+#endif
+#ifdef OUTPUT_VELGRAD
+    case IO_VELGRAD:
+      return 1;
+      break;
+#endif
         case IO_DUSTCHEMZMET:
 #if defined(GALSF_ISMDUSTCHEM_MODEL)
             return 1;
@@ -3628,6 +3933,55 @@ void get_Tab_IO_Label(enum iofields blocknr, char *label)
         case IO_AGS_ZETA:
             strncpy(label, "AGSZ", 4);
             break;
+#if defined (TREE_RAD) && defined (OUTPUTCOL)
+    case IO_TREE_RAD:
+      strncpy(label, "TCOL", 4);
+      break;
+#ifdef TREE_RAD_H2
+    case IO_TREE_RAD_H2:
+      strncpy(label, "TCH2", 4);
+      break;
+#endif
+#ifdef TREE_RAD_CO
+    case IO_TREE_RAD_CO:
+      strncpy(label, "TCCO", 4);
+      break;
+#endif
+#endif
+#ifdef G0_VARIABLE
+    case IO_FLUX:
+      strncpy(label, "IFUV", 4);
+      break;
+#endif
+#ifdef CHEMCOOL
+    case IO_SG_CHEM:
+      strncpy(label, "CHEM", 4);
+      break;
+    case IO_SG_DUST_TEMP:
+      strncpy(label, "DUST", 4);
+      break;
+#ifdef OUTPUT_INDIVIDUAL_COOLRATES
+    case IO_COOLRATES:
+      strncpy(label, "CHC1", 4);
+      break;
+    case IO_CHEM_COOLRATES:
+      strncpy(label, "CHC2", 4);
+      break;
+#endif
+#ifdef OUTPUT_SHIELD_FAC
+    case IO_SHIELD_FAC_H2:
+      strncpy(label, "SHH2", 4);
+      break;
+    case IO_SHIELD_FAC_DUST:
+      strncpy(label, "SHDU", 4);
+      break;
+#endif
+#endif //CHEMCOOL
+#ifdef OUTPUT_VELGRAD
+        case IO_VELGRAD:
+            strncpy(label, "DVEL", 4);
+            break;
+#endif
         case IO_VSTURB_DISS:
             strncpy(label, "VSDI", 4);
             break;
@@ -4035,6 +4389,55 @@ void get_dataset_name(enum iofields blocknr, char *buf)
         case IO_AGS_ZETA:
             strcpy(buf, "AGS-Zeta");
             break;
+#if defined (TREE_RAD) && defined (OUTPUTCOL)
+    case IO_TREE_RAD:
+      strcpy(buf, "TreecolColumnDensitiesAll");
+      break;
+#ifdef TREE_RAD_H2
+    case IO_TREE_RAD_H2:
+      strcpy(buf, "TreecolColumnDensitiesH2");
+      break;
+#endif
+#ifdef TREE_RAD_CO
+    case IO_TREE_RAD_CO:
+      strcpy(buf, "TreecolColumnDensitiesCO");
+      break;
+#endif
+#endif
+#ifdef G0_VARIABLE
+    case IO_FLUX:
+      strcpy(buf, "EnergyDensityFUV");
+      break;
+#endif
+#ifdef CHEMCOOL
+    case IO_SG_CHEM:
+      strcpy(buf, "ChemicalAbundancesSG");
+      break;
+    case IO_SG_DUST_TEMP:
+      strcpy(buf, "DustTemperature");
+      break;
+#ifdef OUTPUT_SHIELD_FAC
+    case IO_SHIELD_FAC_H2:
+      strcpy(buf, "ShieldingFactorH2");
+      break;
+    case IO_SHIELD_FAC_DUST:
+      strcpy(buf, "ShieldingFactorDust");
+      break;
+#endif
+#ifdef OUTPUT_INDIVIDUAL_COOLRATES
+    case IO_COOLRATES:
+      strcpy(buf, "IndividualCoolingRates");
+      break;
+    case IO_CHEM_COOLRATES:
+      strcpy(buf, "IndividualChemicalCoolingRates");
+      break;
+#endif
+#endif //CHEMCOOL
+#ifdef OUTPUT_VELGRAD
+        case IO_VELGRAD:
+          strcpy(buf, "VelocityGradient");
+          break;
+#endif
         case IO_VSTURB_DISS:
             strcpy(buf, "TurbulenceDissipation");
             break;
