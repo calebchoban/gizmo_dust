@@ -20,7 +20,7 @@
  */
 
 
-#if defined(GALSF) && defined(STOCHASTIC_IMF) // master switch for compiling the routines below //
+#if defined(GALSF) && (defined(STOCHASTIC_IMF) || defined(SAMPLE_IMF_FROM_GAS))
 
 #ifdef OUTPUT_STARFORMATION_INFO
 void save_sf_info_to_file(){

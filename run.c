@@ -359,6 +359,26 @@ void calculate_non_standard_physics(void)
     int i; for(i = FirstActiveParticle; i >= 0; i = NextActiveParticle[i]){if(P[i].Type == 5 && P[i].do_gas_search_this_timestep){P[i].dt_since_last_gas_search = 0;}}
 #endif
 
+#ifdef SAMPLE_IMF_FROM_GAS
+    if(ThisTask == 0)
+      printf("assign_stellar_masses started...\n");
+    assign_stellar_masses();
+    if(ThisTask == 0)
+      printf("done with assign_stellar_masses\n");
+#endif
+
+#ifdef SAMPLE_IMF
+    if(All.Time > All.TimeNextIMFSample)
+      {
+        if(ThisTask == 0)
+          printf("Time to assign stellar masses to the newly formed star particles.\n");
+
+        assign_stellar_masses();
+
+        All.TimeNextIMFSample += All.TimeIntervalIMFSample;
+      }
+#endif
+
 }
 
 

@@ -1061,12 +1061,13 @@ void *photoionize_evaluate_primary(void *p);
 void *photoionize_evaluate_secondary(void *p);
 #endif
 
-#if defined SAMPLE_IMF || defined STOCHASTIC_IMF
+#if defined SAMPLE_IMF || defined STOCHASTIC_IMF || defined SAMPLE_IMF_FROM_GAS 
 double get_lifetime(double mass);
 double get_logL_pe(double mass);
 double get_logL_pd(double mass);
 double get_logS_ly(double mass);
 int get_index(double search);
+void assign_stellar_masses(void);
 #endif
 
 #ifdef RANDOM_SN_INJECT

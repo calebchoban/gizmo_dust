@@ -590,13 +590,13 @@ void force_update_node_recursive(int no, int sib, int father)
                         cr_injection += Nodes[p].cr_injection;
 #endif
 #ifdef G0_VARIABLE
-			uv_lum += Nodes[p].u.d.uv_luminosity;
+			uv_lum += Nodes[p].uv_luminosity;
 #endif
 #ifdef TREE_RAD_H2
-			h2mass += Nodes[p].u.d.h2mass;
+			h2mass += Nodes[p].h2mass;
 #endif
 #ifdef TREE_RAD_CO
-			comass += Nodes[p].u.d.comass;
+			comass += Nodes[p].comass;
 #endif
 
 #ifdef RT_USE_GRAVTREE
@@ -690,6 +690,14 @@ void force_update_node_recursive(int no, int sib, int father)
 #endif
 #ifdef COSMIC_RAY_SUBGRID_LEBRON
                     cr_injection += cr_get_source_injection_rate(p);
+#endif
+
+#ifdef G0_VARIABLE
+                    if(P[p].Type == 4) /*Only do this for star particles*/
+                      {
+                        uv_lum += P[p].UV_luminosity;
+                        //printf("mass = %g,  lum = %g\n", P[p].Mass, P[p].UV_luminosity);
+                      }
 #endif
 
 #if defined(TREE_RAD_H2) || defined(TREE_RAD_CO)
@@ -894,13 +902,13 @@ void force_update_node_recursive(int no, int sib, int father)
         Nodes[no].cr_injection = cr_injection;
 #endif
 #ifdef G0_VARIABLE
-	Nodes[no].u.d.uv_luminosity = uv_lum;
+	Nodes[no].uv_luminosity = uv_lum;
 #endif
 #ifdef TREE_RAD_H2
-	Nodes[no].u.d.h2mass = h2mass;
+	Nodes[no].h2mass = h2mass;
 #endif
 #ifdef TREE_RAD_CO
-	Nodes[no].u.d.comass = comass;
+	Nodes[no].comass = comass;
 #endif
 
 
@@ -1120,13 +1128,13 @@ void force_exchange_pseudodata(void)
             DomainMoment[i].cr_injection = Nodes[no].cr_injection;
 #endif
 #ifdef G0_VARIABLE
-	    DomainMoment[i].uv_lum = Nodes[no].u.d.uv_luminosity;
+	    DomainMoment[i].uv_lum = Nodes[no].uv_luminosity;
 #endif
 #ifdef TREE_RAD_H2
-	    DomainMoment[i].h2mass = Nodes[no].u.d.h2mass;
+	    DomainMoment[i].h2mass = Nodes[no].h2mass;
 #endif
 #ifdef TREE_RAD_CO
-	    DomainMoment[i].comass = Nodes[no].u.d.comass;
+	    DomainMoment[i].comass = Nodes[no].comass;
 #endif
 
 
@@ -1237,13 +1245,13 @@ void force_exchange_pseudodata(void)
                     Nodes[no].cr_injection = DomainMoment[i].cr_injection;
 #endif
 #ifdef G0_VARIABLE
-		    Nodes[no].u.d.uv_luminosity = DomainMoment[i].uv_lum;
+		    Nodes[no].uv_luminosity = DomainMoment[i].uv_lum;
 #endif
 #ifdef TREE_RAD_H2
-		    Nodes[no].u.d.h2mass = DomainMoment[i].h2mass;
+		    Nodes[no].h2mass = DomainMoment[i].h2mass;
 #endif
 #ifdef TREE_RAD_CO
-		    Nodes[no].u.d.comass = DomainMoment[i].comass;
+		    Nodes[no].comass = DomainMoment[i].comass;
 #endif
 #ifdef RT_USE_GRAVTREE
                     int k; for(k=0;k<N_RT_FREQ_BINS;k++) {Nodes[no].stellar_lum[k] = DomainMoment[i].stellar_lum[k];}
@@ -1401,13 +1409,13 @@ void force_treeupdate_pseudos(int no)
             cr_injection += Nodes[p].cr_injection;
 #endif
 #ifdef G0_VARIABLE
-	    uv_lum += Nodes[p].u.d.uv_luminosity;
+	    uv_lum += Nodes[p].uv_luminosity;
 #endif
 #ifdef TREE_RAD_H2
-	    h2mass += Nodes[p].u.d.h2mass;
+	    h2mass += Nodes[p].h2mass;
 #endif
 #ifdef TREE_RAD_CO
-	    comass += Nodes[p].u.d.comass;
+	    comass += Nodes[p].comass;
 #endif
 
 #ifdef RT_USE_GRAVTREE
@@ -1570,13 +1578,13 @@ void force_treeupdate_pseudos(int no)
     Nodes[no].cr_injection = cr_injection;
 #endif
 #ifdef G0_VARIABLE
-    Nodes[no].u.d.uv_luminosity = uv_lum;
+    Nodes[no].uv_luminosity = uv_lum;
 #endif
 #ifdef TREE_RAD_H2
-    Nodes[no].u.d.h2mass = h2mass;
+    Nodes[no].h2mass = h2mass;
 #endif
 #ifdef TREE_RAD_CO
-    Nodes[no].u.d.comass = comass;
+    Nodes[no].comass = comass;
 #endif
 
 #ifdef RT_USE_GRAVTREE
@@ -2233,13 +2241,13 @@ int force_treeevaluate(int target, int mode, int *exportflag, int *exportnodecou
 		gas_mass = mass;
 		if (isnan(gas_mass)) printf("Node mass is NaN %d\n", no);
 #ifdef TREE_RAD_H2
-		h2_mass = nop->u.d.h2mass;
+		h2_mass = nop->h2mass;
 #endif
 #ifdef TREE_RAD_CO
-		co_mass = nop->u.d.comass;
+		co_mass = nop->comass;
 #endif
 #ifdef G0_VARIABLE
-		uv_lum = nop->u.d.uv_luminosity;
+		uv_lum = nop->uv_luminosity;
 #endif
 #endif
 

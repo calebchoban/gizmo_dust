@@ -61,7 +61,7 @@ static inline double envelope_function(double x)
 }
 
 
-const double M_max = 50.;
+const double M_max = 120.;
 const double M_min = 0.08;
 
 #ifdef METALSSSS
@@ -130,7 +130,7 @@ void assign_stellar_masses() {
     {
       if(P[i].sampled == -1)
 	{
-	  mass[j] = P[i].Mass * All.UnitMass_in_g / SOLAR_MASS;
+	  mass[j] = P[i].Mass * All.UnitMass_in_g / SOLAR_MASS_CGS;
 #ifdef METALSSSS
 	  for(ik = 0; ik < 12; ik++)
 	    Zmass[j*12+ik] = P[i].Zm[ik];
@@ -327,8 +327,8 @@ void assign_stellar_masses() {
       if(P[i].sampled == -1)
         {
 	  //change the dynamical mass of the star particle
-	  double ratio = (mass[k] * SOLAR_MASS / All.UnitMass_in_g) / P[i].Mass;	  
-	  P[i].Mass = mass[k] * SOLAR_MASS / All.UnitMass_in_g;
+	  double ratio = (mass[k] * SOLAR_MASS_CGS / All.UnitMass_in_g) / P[i].Mass;	  
+	  P[i].Mass = mass[k] * SOLAR_MASS_CGS / All.UnitMass_in_g;
 	  //printf("P[i].Mass = %g, P[i].ID = %u\n", P[i].Mass, P[i].ID);                                        
 	  for(iz=0; iz<3; iz++)
 	    P[i].dp[iz] *= ratio;
@@ -385,7 +385,7 @@ void assign_stellar_masses() {
 #ifdef METALSSSS
 			  //TODO
 #endif
-			  P[NumPart + stars_spawned].Mass = stellar_masses[k*N_STELLAR_MASS+j] * SOLAR_MASS / All.UnitMass_in_g;
+			  P[NumPart + stars_spawned].Mass = stellar_masses[k*N_STELLAR_MASS+j] * SOLAR_MASS_CGS / All.UnitMass_in_g;
 			  P[i].Mass -= P[NumPart + stars_spawned].Mass;
 			  //if(P[i].Mass<0) P[i].Mass=0;
 			  //if(P[i].Mass<0) 
@@ -413,7 +413,7 @@ void assign_stellar_masses() {
 #else
 		      double time = All.Time;
 #endif
-		      if( (All.UnitTime_in_s/SEC_PER_YEAR/All.HubbleParam*(time - P[i].StellarAge)) < get_lifetime(mass_j) )
+		      if( (UNIT_TIME_IN_CGS/SECONDS_PER_YEAR/All.HubbleParam*(time - P[i].StellarAge)) < get_lifetime(mass_j) )
 			{
 			  P[i].UV_luminosity += pow(10., get_logL_pe( mass_j ) ); //test   
 #ifdef CS_PHOTO_IONIZE

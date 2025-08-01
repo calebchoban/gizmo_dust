@@ -138,6 +138,14 @@ void init(void)
     if(RestartFlag == 2) {endrun(78787);}
 #endif
 
+#ifdef MULTI_SN_INJECT
+    All.TimeToExplode = 0.0;
+#endif
+
+#ifdef SAMPLE_IMF
+    All.TimeNextIMFSample = All.TimeIntervalIMFSample;
+#endif
+
     All.TotNumOfForces = 0;
     All.TopNodeAllocFactor = 0.008; /* this will start from a low value and be iteratively increased until it is well-behaved */
 #ifdef SINGLE_STAR_AND_SSP_NUCLEAR_ZOOM
@@ -177,6 +185,22 @@ void init(void)
 
 #ifdef DM_SIDM
     init_self_interactions();
+#endif
+
+#if defined SAMPLE_IMF || defined SAMPLE_IMF_FROM_GAS
+        if(RestartFlag == 2)
+          if(P[i].Type == 4)
+            P[i].sampled = 1;
+          else
+            P[i].sampled = 0;
+
+        if(RestartFlag == 0){
+          P[i].sampled = 0;
+#ifndef INDIVIDUAL_STARS_SPLIT
+          for(j = 0; j < N_STELLAR_MASS; j++)
+            P[i].MstarSampleIMF[j] = 0.;
+#endif
+        }
 #endif
 
 #if defined RANDOM_SN_INJECT || defined STELLAR_FEEDBACK
@@ -289,6 +313,10 @@ void init(void)
 #endif
 #ifdef GALSF
         if(RestartFlag == 0) {P[i].StellarAge = 0;}
+#ifdef DETERMINISTIC_SF
+	if(RestartFlag == 0) {SphP[i].TimeBeginSF = -1.;}
+	if(RestartFlag == 0) {SphP[i].TimeSF = 0;}
+#endif
 #ifdef GALSF_SFR_IMF_VARIATION
         if(RestartFlag == 0) {P[i].IMF_Mturnover = 2.0;} /* gives a solar-type IMF for our calculations in current code */
 #endif

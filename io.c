@@ -482,7 +482,7 @@ void fill_write_buffer(enum iofields blocknr, int *startindex, int pc, int type)
             break;
 
         case IO_SFR:		/* star formation rate */
-#if defined GALSF && !defined(STOCHASTIC_IMF) 
+#if defined GALSF && !defined(STOCHASTIC_IMF) && !defined(SAMPLE_IMF_FROM_GAS) 
             for(n = 0; n < pc; pindex++)
                 if(P[pindex].Type == type)
                 {   /* units convert to solar masses per yr */
@@ -589,7 +589,7 @@ void fill_write_buffer(enum iofields blocknr, int *startindex, int pc, int type)
     case IO_FLUX:
       {
       double u_Habing = 5.29e-14; //Habing field, in erg cm^-3
-      double fac_flux2habing = 1.0 / (4. * M_PI * C_LIGHT_CODE * pow(All.UnitLength_in_cm, 2) ) / u_Habing;
+      double fac_flux2habing = 1.0 / (4. * M_PI * C_LIGHT_CGS * pow(All.UnitLength_in_cm, 2) ) / u_Habing;
       for(n = 0; n < pc; pindex++)
         if(P[pindex].Type == type){
           double G0 = 0.;

@@ -129,7 +129,7 @@ double do_chemcool_step(int target, double dt, double dl, int mode)
   
 #ifdef G0_VARIABLE  
   double u_Habing = 5.29e-14; //Habing field, in erg cm^-3
-  double fac_flux2habing = 1.0 / (4.*M_PI* C_LIGHT_CODE * pow(All.UnitLength_in_cm, 2) ) / u_Habing;
+  double fac_flux2habing = 1.0 / (4.*M_PI* C_LIGHT_CGS * pow(All.UnitLength_in_cm, 2) ) / u_Habing;
 
   double UV_flux_tot = 0.0;
   double UV_flux_min_pix = 0.324e-2/NPIX / fac_flux2habing;

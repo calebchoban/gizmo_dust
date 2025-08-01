@@ -170,8 +170,8 @@ void photoionize(void)
           photons_per_sec = pow(10., get_logS_ly(P[i].MassMassiveStar) );
 	  //printf("P[i].MassMassiveStar=%g,  photons_per_sec=%g\n", P[i].MassMassiveStar, photons_per_sec);
 #endif
-#ifdef SAMPLE_IMF 
-	  photons_per_sec = P[i].Lyman_photons_per_sec;
+#if defined SAMPLE_IMF || defined SAMPLE_IMF_FROM_GAS
+	  photons_per_sec =  pow(10., get_logS_ly(P[i].Mass) );
 #endif
 
 	  /*
@@ -499,8 +499,8 @@ void photoionize(void)
 #ifdef STOCHASTIC_IMF
 	      photons_per_sec = pow(10., get_logS_ly(P[i].MassMassiveStar) );
 #endif
-#ifdef SAMPLE_IMF 
-	      photons_per_sec = P[i].Lyman_photons_per_sec;
+#if defined SAMPLE_IMF || defined SAMPLE_IMF_FROM_GAS 
+	      photons_per_sec =  pow(10., get_logS_ly(P[i].Mass) );
 #endif
 
 	      double temp = 1.e4;

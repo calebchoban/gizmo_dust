@@ -728,7 +728,7 @@ CC       =   mpicxx
 endif
 FC      = mpifort
 OPTIMIZE =  -O2 -g -Wall -m64 -wd981 -wd2259 -wd1572
-OPTIMIZE = -O2 -g -m64 -Wall
+OPTIMIZE = -O0 -g -m64 -Wall
 OPTIMIZE  = -g -O2
 GSL_INCL = -I$(GSL_BASE)/include
 GSL_LIBS = -L$(GSL_BASE)/lib -Xlinker -R -Xlinker $(GSL_BASE) -lgsl -lgslcblas
@@ -1413,7 +1413,7 @@ OBJS    += imf_sampling.o stellar_properties.o
 endif
 
 ifeq (SAMPLE_IMF_FROM_GAS,$(findstring SAMPLE_IMF_FROM_GAS,$(CONFIGVARS)))
-OBJS    += imf_sampling_gas.o stellar_properties.o
+OBJS    += imf_sampling_gas.o stellar_properties_imf.o
 endif
 
 ifeq (RANDOM_SN_INJECT,$(findstring RANDOM_SN_INJECT,$(CONFIGVARS)))

@@ -182,7 +182,7 @@ void update_weights(void)
 	      //lifetime = All.LifeTimeSNII;
 #endif
 #ifdef INDIVIDUAL_STARS_SPLIT
-	      mass = P[i].Mass * All.UnitMass_in_g / SOLAR_MASS;
+	      mass = P[i].Mass * All.UnitMass_in_g / SOLAR_MASS_CGS;
 	      lifetime = get_lifetime(mass);
 #endif
 #ifdef INSTANT_SN_FEEDBACK_FOR_SOME_TIME
@@ -213,7 +213,7 @@ void update_weights(void)
               lifetime = get_lifetime(mass);
 #endif
 #ifdef INDIVIDUAL_STARS_SPLIT
-              mass = P[i].Mass * All.UnitMass_in_g / SOLAR_MASS;
+              mass = P[i].Mass * All.UnitMass_in_g / SOLAR_MASS_CGS;
               lifetime = get_lifetime(mass);
 #endif
               if(age >= lifetime && mass < 8.0 && mass > 1.0)

@@ -21,20 +21,21 @@
 GALSF
 STELLAR_FEEDBACK
 PHOTO_IONIZATION
-STOCHASTIC_IMF
-INSTANT_SN_FEEDBACK_FOR_SOME_TIME
+#STOCHASTIC_IMF
+#INSTANT_SN_FEEDBACK_FOR_SOME_TIME
 OUTPUT_STARFORMATION_INFO
 #JEANS_LENGTH_THRESHOLD
 JEANS_MASS_THRESHOLD
 SF_ONLY_IN_CONV_FLOWS
 SF_INSTANT_CUTOFF
+DETERMINISTIC_SF
 OUTPUT_VELGRAD
 
-#MAGNETIC                       # master switch for MHD, regardless of which Hydro solver is used
-#MHD_B_SET_IN_PARAMS            # set initial fields (Bx,By,Bz) in parameter file
+MAGNETIC                       # master switch for MHD, regardless of which Hydro solver is used
+MHD_B_SET_IN_PARAMS            # set initial fields (Bx,By,Bz) in parameter file
 
-#SAMPLE_IMF
-#N_STELLAR_MASS=300
+SAMPLE_IMF_FROM_GAS
+N_STELLAR_MASS=1
 #INDIVIDUAL_STARS_SPLIT
 
 WSS_CIE_COOL 
@@ -162,7 +163,7 @@ HYDRO_MESHLESS_FINITE_MASS     # solve hydro using the mesh-free Lagrangian (fix
 ####################################################################################################
 #OPENMP=2                       # Masterswitch for explicit OpenMP implementation
 #PTHREADS_NUM_THREADS=4         # custom PTHREADs implementation (don't enable with OPENMP)
-MULTIPLEDOMAINS=4             # Multi-Domain option for the top-tree level (alters load-balancing)
+MULTIPLEDOMAINS=16             # Multi-Domain option for the top-tree level (alters load-balancing)
 ####################################################################################################
 
 

@@ -7,8 +7,7 @@
 #include "allvars.h"
 #include "proto.h"
 
-#if defined SAMPLE_IMF || defined STOCHASTIC_IMF
-
+#ifdef STOCHASTIC_IMF
 
 double get_lifetime(double mass){
   double A, B;
@@ -53,6 +52,7 @@ double tbl_logMdustC_agb[21] = {
 };//0.1 solar metallicity
 #endif
 
+/*
 double tbl_logL_pe[21] = { 
   27.96209322, 28.85707938, 29.59881618, 30.21651755, 
   30.82357317, 31.32654796, 32.12136499, 33.04425441, 
@@ -79,9 +79,9 @@ double tbl_logL_pd[21] = {
 37.13675621, 37.42216435, 37.6834924 , 37.92283649, 38.20300079,
 38.38144516
 }; // solar metallicity
+*/
 
 
-/*
 double tbl_logL_pe[21] = { 30.20996888,  30.93678454,  31.54526414,  32.16387272,
 			   32.84424722,  33.36105133,  34.06013471,  34.63134049,
 			   35.10873089,  35.57254876,  35.96533313,  36.4787194 ,
@@ -106,7 +106,6 @@ double tbl_logS_ly[21] = { 27.53371648,  28.68920307,  29.6565598 ,  30.64001949
 			   44.16185591,  45.28618199,  46.06581943,  47.16068103,
 			   47.87237443,  48.57095918,  48.98145146,  49.33857457,  
 			   49.66294627}; // 0.1 solar metallicity
-*/
 
 #ifdef DUST_IN_AGB
 double get_logMdustC_agb(double mass){

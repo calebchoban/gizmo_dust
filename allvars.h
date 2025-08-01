@@ -2426,6 +2426,18 @@ extern struct global_data_all_processes
   double MaxMassIMF;
 #endif
 
+#if defined SAMPLE_IMF || defined SAMPLE_IMF_FROM_GAS
+  double IMFSampleStellarMassCut;
+
+  gsl_rng *r_for_imf;
+
+  double SearchingRadius;
+  double MassTolerance;
+  double TimeNextIMFSample;
+  double TimeIntervalIMFSample;
+
+#endif
+
 #ifdef PHOTO_IONIZATION
   double InitialGasMass;
 #endif
@@ -2575,7 +2587,7 @@ extern struct global_data_all_processes
   double OverDensThresh;
   double PhysDensThresh;
   double MaxSfrTimescale;
-#ifdef STOCHASTIC_IMF 
+#if defined(STOCHASTIC_IMF) || defined (SAMPLE_IMF_FROM_GAS)
   double SfEffPerFreeFall;
 #endif
 #ifdef GALSF_EFFECTIVE_EQS
@@ -2949,6 +2961,13 @@ extern ALIGN(32) struct particle_data
     MyFloat lc_smear_z;
 #endif
 #endif // GDE_DISTORTIONTENSOR //
+
+#if defined SAMPLE_IMF || defined SAMPLE_IMF_FROM_GAS
+    int sampled;
+#ifndef INDIVIDUAL_STARS_SPLIT
+    MyFloat MstarSampleIMF[N_STELLAR_MASS];
+#endif
+#endif
 
 #ifdef GALSF
     MyFloat StellarAge;		/*!< formation time of star particle */
@@ -3520,6 +3539,11 @@ extern struct gas_cell_data
 #endif
 #ifdef GALSF_FB_TURNOFF_COOLING
   MyFloat DelayTimeCoolingSNe;      /*!< flag indicating cooling is suppressed b/c heated by SNe */
+#endif
+
+#ifdef DETERMINISTIC_SF
+  MyFloat TimeBeginSF;
+  MyFloat TimeSF;
 #endif
 
 #ifdef TURB_DRIVING
@@ -4241,15 +4265,6 @@ extern ALIGN(32) struct NODE
       int sibling;		/*!< this gives the next node in the walk in case the current node can be used */
       int nextnode;		/*!< this gives the next node in case the current node needs to be opened */
       int father;		/*!< this gives the parent node of each node (or -1 if we have the root node) */
-#ifdef TREE_RAD_H2
-      MyFloat h2mass;             /*!< mass of h2 in node */
-#endif
-#ifdef TREE_RAD_CO
-      MyFloat comass;             /*!< mass of co in node */
-#endif
-#ifdef G0_VARIABLE
-      MyFloat uv_luminosity;             /*!< uv luminosity in node */
-#endif    
     }
     d;
   }
@@ -4260,6 +4275,17 @@ extern ALIGN(32) struct NODE
 #if defined(GRAVTREE_CALCULATE_GAS_MASS_IN_NODE)
   MyFloat gasmass;
 #endif
+
+#ifdef TREE_RAD_H2
+  MyFloat h2mass;             /*!< mass of h2 in node */
+#endif
+#ifdef TREE_RAD_CO
+  MyFloat comass;             /*!< mass of co in node */
+#endif
+#ifdef G0_VARIABLE
+  MyFloat uv_luminosity;             /*!< uv luminosity in node */
+#endif
+
 #ifdef BH_DYNFRICTION_FROMTREE
   long N_part;   /*!< number of particles+cells in the tree node */
 #endif
